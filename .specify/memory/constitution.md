@@ -1,50 +1,141 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+  ============================================================================
+  SYNC IMPACT REPORT
+  ============================================================================
+
+  Version Change: [INITIAL] → 1.0.0
+
+  Modified Principles:
+  - N/A (initial constitution)
+
+  Added Sections:
+  - Core Principles (5 principles tailored for personal research project)
+  - Development Workflow
+  - Governance
+
+  Removed Sections:
+  - N/A (initial constitution)
+
+  Templates Requiring Updates:
+  - ✅ .specify/templates/plan-template.md (reviewed - compatible)
+  - ✅ .specify/templates/spec-template.md (reviewed - compatible)
+  - ✅ .specify/templates/tasks-template.md (reviewed - updated OPTIONAL test guidance)
+
+  Follow-up TODOs:
+  - None - all placeholders filled
+
+  ============================================================================
+-->
+
+# pihole-textual Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Rapid Prototyping
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+Speed-to-market over perfection. This is a personal research project focused on validating ideas quickly. Prioritise:
+- Working features over comprehensive documentation
+- Iterative development over upfront design
+- Quick feedback loops over elaborate planning
+- Practical validation over theoretical completeness
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**Rationale**: Research projects need velocity to test hypotheses and pivot quickly based on learnings.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. Pragmatic Testing
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+Tests are OPTIONAL and should only be written where they add clear value. For this personal research project:
+- Manual testing is acceptable for validating functionality
+- Write tests for complex logic that's hard to verify manually
+- Integration tests preferred over unit tests when testing is done
+- Full test coverage is NOT required - focus on critical paths only
+- User validation and observable behaviour matter more than test metrics
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+**Rationale**: Test overhead can slow research velocity. Tests should enable faster iteration, not hinder it.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### III. Simplicity First
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+Apply YAGNI (You Aren't Gonna Need It) rigorously:
+- Build only what's needed for current requirements
+- Avoid abstractions until patterns emerge from real usage
+- Prefer straightforward solutions over flexible architectures
+- Delete unused code immediately - no "just in case" features
+- Complexity must be justified by present need, not future speculation
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+**Rationale**: Over-engineering is the enemy of research projects. Simple code is easier to modify as understanding evolves.
+
+### IV. Textual-First Development
+
+Leverage the Textual framework's patterns and conventions:
+- Follow Textual's reactive programming model
+- Use Textual's built-in widgets before creating custom ones
+- Structure apps following Textual's composition patterns
+- Leverage Textual's CSS system for styling
+- Use Textual's message passing for component communication
+
+**Rationale**: Working with the framework's grain reduces friction and accelerates development.
+
+### V. Observable Behaviour
+
+Focus on user-visible functionality:
+- Prioritise features that provide immediate user value
+- Make application state visible and debuggable
+- Log significant operations for troubleshooting
+- Provide clear feedback for user actions
+- Internal implementation quality matters less than external usability
+
+**Rationale**: For a TUI application, the user experience is paramount. Internal elegance is secondary to observable usefulness.
+
+## Development Workflow
+
+### Iteration Cycle
+
+1. **Specify**: Define minimal user-facing behaviour required
+2. **Prototype**: Implement quickly, focusing on "does it work?"
+3. **Validate**: Manual testing or minimal automated tests
+4. **Ship**: Commit working features immediately
+5. **Reflect**: Assess learnings, decide next iteration
+
+### Quality Gates
+
+- Feature MUST be manually tested before commit
+- Code MUST be readable by future self (basic clarity standard)
+- Breaking changes SHOULD be noted in commit messages
+- Tests are OPTIONAL - include only when they accelerate iteration
+
+### Documentation
+
+- README with basic setup and usage is sufficient
+- Inline comments only where logic isn't self-evident
+- User-facing features documented as needed for testing
+- Architecture documentation is optional
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+### Authority
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+This constitution defines the development philosophy for pihole-textual. All development decisions should align with these principles, prioritising speed and practicality over process and perfection.
+
+### Amendments
+
+- Constitution can be updated as project needs evolve
+- Version bumps follow semantic versioning:
+  - **MAJOR**: Fundamental philosophy change (e.g., adding mandatory TDD)
+  - **MINOR**: New principle added or existing principle significantly expanded
+  - **PATCH**: Clarifications, wording improvements, minor refinements
+- Amendments should be documented with rationale
+
+### Compliance
+
+- Review features against principles, especially Simplicity First
+- Challenge complexity: "Do we really need this now?"
+- Question testing overhead: "Does this test help us move faster?"
+- Validate against user needs: "Does this improve observable behaviour?"
+
+### When to Break the Rules
+
+Rules can be broken when there's a clear reason:
+- Document the exception and why it's needed
+- Assess if exception reveals a principle that needs updating
+- Prefer amending constitution over accumulating exceptions
+
+**Version**: 1.0.0 | **Ratified**: 2025-12-05 | **Last Amended**: 2025-12-05
