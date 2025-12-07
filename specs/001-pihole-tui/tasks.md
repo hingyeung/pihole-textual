@@ -24,13 +24,13 @@
 
 **Purpose**: Project initialisation and basic structure
 
-- [ ] T001 Create pyproject.toml with project metadata, dependencies (textual, httpx, cryptography, pydantic, tomli), and entry point configuration
-- [ ] T002 [P] Create src/pihole_tui/__init__.py with package initialisation
-- [ ] T003 [P] Create src/pihole_tui/__main__.py as entry point for `python -m pihole_tui`
-- [ ] T004 [P] Create src/pihole_tui/constants.py with API paths, default values, and enums (QueryStatus, DomainListType, BulkOperationType)
-- [ ] T005 [P] Create .gitignore for Python project (exclude __pycache__, *.pyc, .env, dist/, build/, *.egg-info, .pytest_cache)
-- [ ] T006 [P] Create README.md with basic setup and usage instructions per constitution requirements
-- [ ] T007 [P] Create directory structure: src/pihole_tui/api/, src/pihole_tui/models/, src/pihole_tui/screens/, src/pihole_tui/widgets/, src/pihole_tui/utils/
+- [X] T001 Create pyproject.toml with project metadata, dependencies (textual, httpx, cryptography, pydantic, tomli), and entry point configuration
+- [X] T002 [P] Create src/pihole_tui/__init__.py with package initialisation
+- [X] T003 [P] Create src/pihole_tui/__main__.py as entry point for `python -m pihole_tui`
+- [X] T004 [P] Create src/pihole_tui/constants.py with API paths, default values, and enums (QueryStatus, DomainListType, BulkOperationType)
+- [X] T005 [P] Create .gitignore for Python project (exclude __pycache__, *.pyc, .env, dist/, build/, *.egg-info, .pytest_cache)
+- [X] T006 [P] Create README.md with basic setup and usage instructions per constitution requirements
+- [X] T007 [P] Create directory structure: src/pihole_tui/api/, src/pihole_tui/models/, src/pihole_tui/screens/, src/pihole_tui/widgets/, src/pihole_tui/utils/
 
 ---
 
@@ -40,13 +40,13 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T008 [P] Create src/pihole_tui/models/config.py with ConnectionProfile and UserPreferences models using Pydantic
-- [ ] T009 [P] Create src/pihole_tui/models/session.py with SessionState model for tracking active session
-- [ ] T010 [P] Create src/pihole_tui/utils/crypto.py with Fernet encryption/decryption functions for credential storage
-- [ ] T011 Create src/pihole_tui/utils/config_manager.py with methods to read/write config.toml and encrypted connections.enc file in ~/.config/pihole-tui/
-- [ ] T012 [P] Create src/pihole_tui/utils/validators.py with domain validation, IP validation, and input validation functions
-- [ ] T013 [P] Create src/pihole_tui/utils/formatters.py with time formatting, percentage formatting, and data display helpers
-- [ ] T014 Create src/pihole_tui/api/client.py with base HTTP client using httpx, session management, SID header handling, and auto-retry logic
+- [X] T008 [P] Create src/pihole_tui/models/config.py with ConnectionProfile and UserPreferences models using Pydantic
+- [X] T009 [P] Create src/pihole_tui/models/session.py with SessionState model for tracking active session
+- [X] T010 [P] Create src/pihole_tui/utils/crypto.py with Fernet encryption/decryption functions for credential storage
+- [X] T011 Create src/pihole_tui/utils/config_manager.py with methods to read/write config.toml and encrypted connections.enc file in ~/.config/pihole-tui/
+- [X] T012 [P] Create src/pihole_tui/utils/validators.py with domain validation, IP validation, and input validation functions
+- [X] T013 [P] Create src/pihole_tui/utils/formatters.py with time formatting, percentage formatting, and data display helpers
+- [X] T014 Create src/pihole_tui/api/client.py with base HTTP client using httpx, session management, SID header handling, and auto-retry logic
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -60,22 +60,22 @@
 
 ### Implementation for User Story 1
 
-- [ ] T015 [P] [US1] Create src/pihole_tui/models/__init__.py with model exports
-- [ ] T016 [P] [US1] Create src/pihole_tui/api/__init__.py with API client exports
-- [ ] T017 [P] [US1] Create src/pihole_tui/api/auth.py with authentication endpoints (POST /api/auth for login with password/TOTP, DELETE /api/auth for logout)
-- [ ] T018 [US1] Implement session renewal logic in src/pihole_tui/api/client.py with background task to renew at 80% of validity period
-- [ ] T019 [US1] Implement auto-reconnect logic in src/pihole_tui/api/client.py with exponential backoff for failed connections
-- [ ] T020 [P] [US1] Create src/pihole_tui/screens/__init__.py with screen exports
-- [ ] T021 [P] [US1] Create src/pihole_tui/screens/login.py with LoginScreen class implementing login form (hostname, port, password inputs, remember checkbox, connect button)
-- [ ] T022 [US1] Add TOTP dialog to src/pihole_tui/screens/login.py for two-factor authentication code input
-- [ ] T023 [P] [US1] Create src/pihole_tui/screens/settings.py with SettingsScreen for managing connection profiles and preferences
-- [ ] T024 [US1] Implement connection profile management in src/pihole_tui/screens/settings.py (add, edit, delete, switch between profiles)
-- [ ] T025 [P] [US1] Create src/pihole_tui/widgets/__init__.py with widget exports
-- [ ] T026 [P] [US1] Create src/pihole_tui/widgets/status_indicator.py with connection status widget showing connected/disconnected/connecting states with colour indicators
-- [ ] T027 [US1] Create src/pihole_tui/app.py with main Textual App class, implement startup flow (load saved credentials → auto-login OR show login screen)
-- [ ] T028 [US1] Implement status bar in src/pihole_tui/app.py showing connection status, current profile name, and session expiry
-- [ ] T029 [US1] Implement global error handling in src/pihole_tui/app.py for auth failures, network errors, and session expiry
-- [ ] T030 [US1] Update src/pihole_tui/__main__.py to create and run App instance
+- [X] T015 [P] [US1] Create src/pihole_tui/models/__init__.py with model exports
+- [X] T016 [P] [US1] Create src/pihole_tui/api/__init__.py with API client exports
+- [X] T017 [P] [US1] Create src/pihole_tui/api/auth.py with authentication endpoints (POST /api/auth for login with password/TOTP, DELETE /api/auth for logout)
+- [X] T018 [US1] Implement session renewal logic in src/pihole_tui/api/client.py with background task to renew at 80% of validity period
+- [X] T019 [US1] Implement auto-reconnect logic in src/pihole_tui/api/client.py with exponential backoff for failed connections
+- [X] T020 [P] [US1] Create src/pihole_tui/screens/__init__.py with screen exports
+- [X] T021 [P] [US1] Create src/pihole_tui/screens/login.py with LoginScreen class implementing login form (hostname, port, password inputs, remember checkbox, connect button)
+- [X] T022 [US1] Add TOTP dialog to src/pihole_tui/screens/login.py for two-factor authentication code input
+- [X] T023 [P] [US1] Create src/pihole_tui/screens/settings.py with SettingsScreen for managing connection profiles and preferences
+- [X] T024 [US1] Implement connection profile management in src/pihole_tui/screens/settings.py (add, edit, delete, switch between profiles)
+- [X] T025 [P] [US1] Create src/pihole_tui/widgets/__init__.py with widget exports
+- [X] T026 [P] [US1] Create src/pihole_tui/widgets/status_indicator.py with connection status widget showing connected/disconnected/connecting states with colour indicators
+- [X] T027 [US1] Create src/pihole_tui/app.py with main Textual App class, implement startup flow (load saved credentials → auto-login OR show login screen)
+- [X] T028 [US1] Implement status bar in src/pihole_tui/app.py showing connection status, current profile name, and session expiry
+- [X] T029 [US1] Implement global error handling in src/pihole_tui/app.py for auth failures, network errors, and session expiry
+- [X] T030 [US1] Update src/pihole_tui/__main__.py to create and run App instance
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently using quickstart.md scenarios 1.1-1.6
 
