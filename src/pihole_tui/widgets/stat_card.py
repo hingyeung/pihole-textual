@@ -18,7 +18,6 @@ class StatCard(Static):
         height: auto;
         border: solid $primary;
         padding: 1 2;
-        margin: 0 1;
     }
 
     StatCard .stat-label {
@@ -97,7 +96,6 @@ class DistributionCard(Static):
         height: auto;
         border: solid $primary;
         padding: 1 2;
-        margin: 0 1;
     }
 
     DistributionCard .dist-title {
@@ -176,7 +174,6 @@ class BlockingStatusCard(Static):
         height: 7;
         border: solid $primary;
         padding: 1 2;
-        margin: 0 1;
     }
 
     BlockingStatusCard .status-label {

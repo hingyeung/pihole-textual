@@ -25,7 +25,11 @@ from pihole_tui.utils.formatters import (
     format_percentage,
     format_datetime,
 )
-from pihole_tui.constants import DEFAULT_DASHBOARD_REFRESH_INTERVAL
+from pihole_tui.constants import (
+    DEFAULT_DASHBOARD_REFRESH_INTERVAL,
+    LAYOUT_BREAKPOINT_3COL,
+    LAYOUT_BREAKPOINT_2COL,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -56,25 +60,30 @@ class DashboardScreen(Screen):
         margin-bottom: 1;
     }
 
-    DashboardScreen .dashboard-grid {
-        layout: grid;
-        grid-size: 3;
+    DashboardScreen .dashboard-container {
         grid-gutter: 1;
         padding: 0 2;
-    }
-
-    DashboardScreen .stats-row {
-        layout: horizontal;
         height: auto;
         width: 100%;
-        padding: 1 2;
     }
 
-    DashboardScreen .distributions-row {
-        layout: horizontal;
+    /* Grid items fill their cells with equal width */
+    DashboardScreen .dashboard-container > * {
+        width: 1fr;
         height: auto;
-        width: 100%;
-        padding: 1 2;
+    }
+
+    /* Responsive grid sizes */
+    DashboardScreen.layout-3col .dashboard-container {
+        grid-size: 3;
+    }
+
+    DashboardScreen.layout-2col .dashboard-container {
+        grid-size: 2;
+    }
+
+    DashboardScreen.layout-1col .dashboard-container {
+        grid-size: 1;
     }
 
     DashboardScreen .footer-info {
@@ -115,30 +124,19 @@ class DashboardScreen(Screen):
         # Title
         yield Label("Pi-hole Dashboard", classes="dashboard-title")
 
-        # Main statistics grid
-        with Container(classes="dashboard-grid"):
-            # Row 1: Blocking status and main stats
-            with Horizontal(classes="stats-row"):
-                yield BlockingStatusCard(id="blocking-status")
-                yield StatCard("Total Queries", id="stat-queries-total")
-                yield StatCard("Queries Blocked", id="stat-queries-blocked")
-
-            # Row 2: More statistics
-            with Horizontal(classes="stats-row"):
-                yield StatCard("Percentage Blocked", id="stat-percent-blocked", large=True)
-                yield StatCard("Domains on Blocklists", id="stat-domains-blocklist")
-                yield StatCard("Active Clients", id="stat-clients-active")
-
-            # Row 3: Query forwarding/caching
-            with Horizontal(classes="stats-row"):
-                yield StatCard("Queries Forwarded", id="stat-queries-forwarded")
-                yield StatCard("Queries Cached", id="stat-queries-cached")
-                yield StatCard("Clients Ever Seen", id="stat-clients-ever")
-
-            # Row 4: Distributions
-            with Horizontal(classes="distributions-row"):
-                yield DistributionCard("Query Type Distribution", id="dist-query-types")
-                yield DistributionCard("Reply Type Distribution", id="dist-reply-types")
+        # Main statistics grid - cards are direct children
+        with Grid(classes="dashboard-container"):
+            yield BlockingStatusCard(id="blocking-status")
+            yield StatCard("Total Queries", id="stat-queries-total")
+            yield StatCard("Queries Blocked", id="stat-queries-blocked")
+            yield StatCard("Percentage Blocked", id="stat-percent-blocked", large=True)
+            yield StatCard("Domains on Blocklists", id="stat-domains-blocklist")
+            yield StatCard("Active Clients", id="stat-clients-active")
+            yield StatCard("Queries Forwarded", id="stat-queries-forwarded")
+            yield StatCard("Queries Cached", id="stat-queries-cached")
+            yield StatCard("Clients Ever Seen", id="stat-clients-ever")
+            yield DistributionCard("Query Type Distribution", id="dist-query-types")
+            yield DistributionCard("Reply Type Distribution", id="dist-reply-types")
 
         # Footer with timestamps
         with Container(classes="footer-info"):
@@ -149,6 +147,9 @@ class DashboardScreen(Screen):
 
     async def on_mount(self) -> None:
         """Handle mount event."""
+        # Set initial layout based on current terminal size (after refresh)
+        self.call_after_refresh(self._apply_responsive_layout)
+
         # Initial data fetch
         await self.refresh_data()
 
@@ -162,6 +163,38 @@ class DashboardScreen(Screen):
         # Stop auto-refresh timer
         if self._refresh_timer:
             self._refresh_timer.stop()
+
+    def on_resize(self, event) -> None:
+        """Handle terminal resize events.
+
+        Args:
+            event: Resize event containing new terminal dimensions
+        """
+        self._apply_responsive_layout()
+
+    def _apply_responsive_layout(self) -> None:
+        """Apply appropriate layout based on current terminal width.
+
+        Uses breakpoints to switch between:
+        - 3-column layout: 120+ characters wide
+        - 2-column layout: 80-119 characters wide
+        - 1-column layout: below 80 characters
+        """
+        terminal_width = self.app.size.width
+
+        # Remove all layout classes first
+        self.remove_class("layout-3col", "layout-2col", "layout-1col")
+
+        # Apply appropriate layout class based on breakpoints
+        if terminal_width >= LAYOUT_BREAKPOINT_3COL:
+            self.add_class("layout-3col")
+            logger.debug(f"Applied 3-column layout (width: {terminal_width})")
+        elif terminal_width >= LAYOUT_BREAKPOINT_2COL:
+            self.add_class("layout-2col")
+            logger.debug(f"Applied 2-column layout (width: {terminal_width})")
+        else:
+            self.add_class("layout-1col")
+            logger.debug(f"Applied 1-column layout (width: {terminal_width})")
 
     async def refresh_data(self) -> None:
         """Fetch fresh statistics from Pi-hole API."""

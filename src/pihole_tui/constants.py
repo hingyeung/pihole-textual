@@ -52,6 +52,11 @@ MAX_MEMORY_MB = 150  # Maximum memory usage target
 MIN_TERMINAL_WIDTH = 80
 MIN_TERMINAL_HEIGHT = 24
 
+# Responsive Layout Breakpoints
+LAYOUT_BREAKPOINT_3COL = 120  # 3 columns at 120+ characters
+LAYOUT_BREAKPOINT_2COL = 80   # 2 columns at 80-119 characters
+# Below 80 = 1 column (already MIN_TERMINAL_WIDTH)
+
 # Retry Configuration
 MAX_RETRY_ATTEMPTS = 3
 RETRY_BACKOFF_BASE = 1  # seconds (exponential backoff: 1s, 2s, 4s)
