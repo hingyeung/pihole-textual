@@ -3,5 +3,13 @@
 Exports all Textual screen classes for different views.
 """
 
-# Screens will be imported as they are created
-__all__ = []
+from pihole_tui.screens.dashboard import DashboardScreen
+from pihole_tui.screens.login import LoginScreen, TOTPDialog
+from pihole_tui.screens.settings import SettingsScreen
+
+__all__ = [
+    "DashboardScreen",
+    "LoginScreen",
+    "TOTPDialog",
+    "SettingsScreen",
+]

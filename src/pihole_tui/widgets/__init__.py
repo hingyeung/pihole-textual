@@ -3,5 +3,16 @@
 Exports reusable Textual widget components.
 """
 
-# Widgets will be imported as they are created
-__all__ = []
+from pihole_tui.widgets.stat_card import (
+    BlockingStatusCard,
+    DistributionCard,
+    StatCard,
+)
+from pihole_tui.widgets.status_indicator import StatusIndicator
+
+__all__ = [
+    "StatCard",
+    "DistributionCard",
+    "BlockingStatusCard",
+    "StatusIndicator",
+]

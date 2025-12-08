@@ -5,7 +5,9 @@ and overall application flow.
 """
 
 import asyncio
+import logging
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 from textual.app import App, ComposeResult
@@ -17,6 +19,7 @@ from pihole_tui.api import AuthenticationError, NetworkError, PiHoleAPIClient, S
 from pihole_tui.api.auth import login, logout
 from pihole_tui.constants import ConnectionStatus, SESSION_RENEWAL_THRESHOLD
 from pihole_tui.models import ConnectionProfile, SessionState, UserPreferences
+from pihole_tui.screens.dashboard import DashboardScreen
 from pihole_tui.screens.login import LoginScreen, TOTPDialog
 from pihole_tui.screens.settings import SettingsScreen
 from pihole_tui.utils.config_manager import ConfigManager
@@ -78,6 +81,30 @@ class PiHoleTUI(App):
         self.api_client: Optional[PiHoleAPIClient] = None
         self._renewal_task: Optional[asyncio.Task] = None
 
+        # Configure logging
+        self._configure_logging()
+
+    def _configure_logging(self):
+        """Configure logging to file and console."""
+        # Create log directory
+        log_dir = Path.home() / ".config" / "pihole-tui"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / "pihole-tui.log"
+
+        # Configure root logger
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_file),
+                logging.StreamHandler()  # Also log to console for textual console
+            ]
+        )
+
+        logger = logging.getLogger(__name__)
+        logger.info("Pi-hole TUI starting up")
+        logger.info(f"Logging to {log_file}")
+
     def compose(self) -> ComposeResult:
         """Compose main application UI."""
         yield Header()
@@ -111,37 +138,44 @@ class PiHoleTUI(App):
             status_indicator = self.query_one("#status-indicator", StatusIndicator)
             status_indicator.set_status(ConnectionStatus.CONNECTING)
 
-            # Create API client
+            # Create API client and open it
             base_url = active_profile.get_base_url()
             self.api_client = PiHoleAPIClient(base_url)
+            await self.api_client.__aenter__()  # Open the client connection
 
             try:
-                async with self.api_client:
-                    # Attempt login
-                    auth_response = await login(self.api_client, active_profile.saved_password)
+                # Attempt login
+                auth_response = await login(self.api_client, active_profile.saved_password)
 
-                    # Update session
-                    self.session.sid = auth_response.session.sid
-                    self.session.expires_at = auth_response.session.get_expires_at()
-                    self.session.connection_profile = active_profile
-                    self.session.is_authenticated = True
-                    self.session.last_renewal = datetime.now()
+                # Update session
+                self.session.sid = auth_response.session.sid
+                self.session.expires_at = auth_response.session.get_expires_at()
+                self.session.connection_profile = active_profile
+                self.session.is_authenticated = True
+                self.session.last_renewal = datetime.now()
 
-                    # Set SID in client
-                    self.api_client.set_session(auth_response.session.sid)
+                # Set SID in client
+                self.api_client.set_session(auth_response.session.sid)
 
-                    # Update UI
-                    status_indicator.set_status(ConnectionStatus.CONNECTED)
-                    await self.update_session_info()
+                # Update UI
+                status_indicator.set_status(ConnectionStatus.CONNECTED)
+                await self.update_session_info()
 
-                    # Start session renewal task
-                    self._start_session_renewal()
+                # Start session renewal task
+                self._start_session_renewal()
 
-                    # Show dashboard (would be implemented in Phase 4)
-                    self.notify("Connected successfully", severity="information")
+                # Show dashboard
+                self.notify("Connected successfully", severity="information")
+                await self.show_dashboard()
 
             except (AuthenticationError, NetworkError) as e:
-                # Auto-login failed, show login screen
+                # Auto-login failed, close client and show login screen
+                if self.api_client:
+                    try:
+                        await self.api_client.__aexit__(None, None, None)
+                    except Exception:
+                        pass
+                    self.api_client = None
                 status_indicator.set_status(ConnectionStatus.DISCONNECTED)
                 await self.show_login_screen()
         else:
@@ -166,59 +200,62 @@ class PiHoleTUI(App):
         status_indicator = self.query_one("#status-indicator", StatusIndicator)
         status_indicator.set_status(ConnectionStatus.CONNECTING)
 
-        # Create API client
+        # Create API client and open it
         base_url = profile.get_base_url()
         self.api_client = PiHoleAPIClient(base_url)
+        await self.api_client.__aenter__()  # Open the client connection
 
         try:
-            async with self.api_client:
-                # Attempt login
-                auth_response = await login(self.api_client, password)
+            # Attempt login
+            auth_response = await login(self.api_client, password)
 
-                # Update session
-                self.session.sid = auth_response.session.sid
-                self.session.expires_at = auth_response.session.get_expires_at()
-                self.session.connection_profile = profile
-                self.session.is_authenticated = True
-                self.session.last_renewal = datetime.now()
+            # Update session
+            self.session.sid = auth_response.session.sid
+            self.session.expires_at = auth_response.session.get_expires_at()
+            self.session.connection_profile = profile
+            self.session.is_authenticated = True
+            self.session.last_renewal = datetime.now()
 
-                # Set SID in client
-                self.api_client.set_session(auth_response.session.sid)
+            # Set SID in client
+            self.api_client.set_session(auth_response.session.sid)
 
-                # Save profile if remember is checked
-                if remember:
-                    profile.saved_password = password
-                    profiles = self.config_manager.load_connection_profiles()
+            # Save profile if remember is checked
+            if remember:
+                profile.saved_password = password
+                profiles = self.config_manager.load_connection_profiles()
 
-                    # Check if profile already exists
-                    existing = next((p for p in profiles if p.name == profile.name), None)
-                    if existing:
-                        # Update existing
-                        existing.hostname = profile.hostname
-                        existing.port = profile.port
-                        existing.use_https = profile.use_https
-                        existing.saved_password = password
-                        existing.is_active = True
-                    else:
-                        # Add new
-                        profile.is_active = True
-                        profiles.append(profile)
+                # Check if profile already exists
+                existing = next((p for p in profiles if p.name == profile.name), None)
+                if existing:
+                    # Update existing
+                    existing.hostname = profile.hostname
+                    existing.port = profile.port
+                    existing.use_https = profile.use_https
+                    existing.saved_password = password
+                    existing.is_active = True
+                else:
+                    # Add new
+                    profile.is_active = True
+                    profiles.append(profile)
 
-                    # Deactivate others
-                    for p in profiles:
-                        if p.name != profile.name:
-                            p.is_active = False
+                # Deactivate others
+                for p in profiles:
+                    if p.name != profile.name:
+                        p.is_active = False
 
-                    self.config_manager.save_connection_profiles(profiles)
+                self.config_manager.save_connection_profiles(profiles)
 
-                # Update UI
-                status_indicator.set_status(ConnectionStatus.CONNECTED)
-                await self.update_session_info()
+            # Update UI
+            status_indicator.set_status(ConnectionStatus.CONNECTED)
+            await self.update_session_info()
 
-                # Start session renewal
-                self._start_session_renewal()
+            # Start session renewal
+            self._start_session_renewal()
 
-                self.notify("Connected successfully", severity="information")
+            self.notify("Connected successfully", severity="information")
+
+            # Show dashboard
+            await self.show_dashboard()
 
         except AuthenticationError as e:
             # Check if 2FA is required (403 error)
@@ -229,42 +266,75 @@ class PiHoleTUI(App):
                 if totp_code:
                     # Retry with TOTP
                     try:
-                        async with self.api_client:
-                            auth_response = await login(self.api_client, password, totp_code)
+                        auth_response = await login(self.api_client, password, totp_code)
 
-                            # Update session and UI (same as above)
-                            self.session.sid = auth_response.session.sid
-                            self.session.expires_at = auth_response.session.get_expires_at()
-                            self.session.connection_profile = profile
-                            self.session.is_authenticated = True
-                            self.session.last_renewal = datetime.now()
+                        # Update session and UI (same as above)
+                        self.session.sid = auth_response.session.sid
+                        self.session.expires_at = auth_response.session.get_expires_at()
+                        self.session.connection_profile = profile
+                        self.session.is_authenticated = True
+                        self.session.last_renewal = datetime.now()
 
-                            self.api_client.set_session(auth_response.session.sid)
+                        self.api_client.set_session(auth_response.session.sid)
 
-                            if remember:
-                                profile.saved_password = password
-                                profile.totp_enabled = True
-                                # Save profile...
+                        if remember:
+                            profile.saved_password = password
+                            profile.totp_enabled = True
+                            # Save profile...
 
-                            status_indicator.set_status(ConnectionStatus.CONNECTED)
-                            await self.update_session_info()
-                            self._start_session_renewal()
+                        status_indicator.set_status(ConnectionStatus.CONNECTED)
+                        await self.update_session_info()
+                        self._start_session_renewal()
 
-                            self.notify("Connected successfully", severity="information")
+                        self.notify("Connected successfully", severity="information")
+
+                        # Show dashboard
+                        await self.show_dashboard()
 
                     except AuthenticationError as e2:
                         status_indicator.set_status(ConnectionStatus.ERROR)
                         self.notify(f"Authentication failed: {e2.message}", severity="error")
+                        # Close client on failure
+                        if self.api_client:
+                            try:
+                                await self.api_client.__aexit__(None, None, None)
+                            except Exception:
+                                pass
+                            self.api_client = None
                         await self.show_login_screen(profile)
             else:
                 status_indicator.set_status(ConnectionStatus.ERROR)
                 self.notify(f"Authentication failed: {e.message}", severity="error")
+                # Close client on failure
+                if self.api_client:
+                    try:
+                        await self.api_client.__aexit__(None, None, None)
+                    except Exception:
+                        pass
+                    self.api_client = None
                 await self.show_login_screen(profile)
 
         except NetworkError as e:
             status_indicator.set_status(ConnectionStatus.ERROR)
             self.notify(f"Network error: {e.message}", severity="error")
+            # Close client on failure
+            if self.api_client:
+                try:
+                    await self.api_client.__aexit__(None, None, None)
+                except Exception:
+                    pass
+                self.api_client = None
             await self.show_login_screen(profile)
+
+    async def show_dashboard(self) -> None:
+        """Show the main dashboard screen."""
+        if not self.api_client or not self.session.is_authenticated:
+            self.notify("Not authenticated. Please log in first.", severity="warning")
+            return
+
+        # Push the dashboard screen
+        dashboard = DashboardScreen(self.api_client)
+        await self.push_screen(dashboard)
 
     def _start_session_renewal(self) -> None:
         """Start background task for session renewal."""
@@ -297,21 +367,20 @@ class PiHoleTUI(App):
 
         try:
             if self.api_client:
-                async with self.api_client:
-                    auth_response = await login(
-                        self.api_client,
-                        self.session.connection_profile.saved_password,
-                    )
+                auth_response = await login(
+                    self.api_client,
+                    self.session.connection_profile.saved_password,
+                )
 
-                    # Update session
-                    self.session.sid = auth_response.session.sid
-                    self.session.expires_at = auth_response.session.get_expires_at()
-                    self.session.last_renewal = datetime.now()
+                # Update session
+                self.session.sid = auth_response.session.sid
+                self.session.expires_at = auth_response.session.get_expires_at()
+                self.session.last_renewal = datetime.now()
 
-                    # Update client SID
-                    self.api_client.set_session(auth_response.session.sid)
+                # Update client SID
+                self.api_client.set_session(auth_response.session.sid)
 
-                    await self.update_session_info()
+                await self.update_session_info()
 
         except (AuthenticationError, NetworkError):
             # Renewal failed, clear session
@@ -358,13 +427,17 @@ class PiHoleTUI(App):
                 self.config_manager.set_active_profile(data.name)
                 self.notify(f"Active profile set to: {data.name}", severity="information")
 
-    def action_quit(self) -> None:
+    async def action_quit(self) -> None:
         """Quit application."""
         # Cancel renewal task
         if self._renewal_task:
             self._renewal_task.cancel()
 
-        # Note: Logout will be handled by cleanup when API client closes
-        # We don't attempt logout here to avoid blocking the quit action
+        # Close API client if open
+        if self.api_client:
+            try:
+                await self.api_client.__aexit__(None, None, None)
+            except Exception:
+                pass  # Ignore errors during cleanup
 
         self.exit()

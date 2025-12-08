@@ -5,6 +5,7 @@ auto-retry logic, and error handling.
 """
 
 import asyncio
+import logging
 from typing import Any, Dict, Optional
 
 import httpx
@@ -14,6 +15,8 @@ from pihole_tui.constants import (
     MAX_RETRY_ATTEMPTS,
     RETRY_BACKOFF_BASE,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class PiHoleAPIError(Exception):
@@ -140,9 +143,12 @@ class PiHoleAPIClient:
 
         for attempt in range(attempts):
             try:
+                logger.debug(f"{method} {url} (attempt {attempt + 1}/{attempts})")
                 response = await self._client.request(
                     method=method, url=url, headers=headers, **kwargs
                 )
+
+                logger.debug(f"Response: {response.status_code} from {method} {url}")
 
                 # Handle HTTP errors
                 if response.status_code == 401:
@@ -167,8 +173,13 @@ class PiHoleAPIClient:
 
                 if response.status_code >= 400:
                     error_data = response.json() if response.text else {}
+                    error_msg = error_data.get("message", f"HTTP {response.status_code}")
+                    logger.error(
+                        f"HTTP {response.status_code} from {method} {url}: {error_msg}"
+                    )
+                    logger.debug(f"Response body: {response.text[:500]}")  # First 500 chars
                     raise PiHoleAPIError(
-                        error_data.get("message", f"HTTP {response.status_code}"),
+                        error_msg,
                         status_code=response.status_code,
                         details=error_data,
                     )

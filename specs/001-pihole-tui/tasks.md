@@ -89,21 +89,21 @@
 
 ### Implementation for User Story 2
 
-- [ ] T031 [P] [US2] Create src/pihole_tui/models/stats.py with DashboardStats, QueryTypeDistribution, and ReplyTypeDistribution models
-- [ ] T032 [P] [US2] Create src/pihole_tui/api/stats.py with statistics endpoints (GET /api/stats/summary, GET /api/stats/database/summary)
-- [ ] T033 [US2] Create src/pihole_tui/api/blocking.py with blocking status endpoint (GET /api/dns/blocking)
-- [ ] T034 [P] [US2] Create src/pihole_tui/widgets/stat_card.py with widget for displaying individual statistic panels (queries, blocked, percentage, clients, etc.)
-- [ ] T035 [US2] Implement query type distribution display in src/pihole_tui/widgets/stat_card.py using Textual's bar chart or table widgets
-- [ ] T036 [US2] Implement reply type distribution display in src/pihole_tui/widgets/stat_card.py
-- [ ] T037 [P] [US2] Create src/pihole_tui/screens/dashboard.py with DashboardScreen class and layout for statistics cards
-- [ ] T038 [US2] Implement statistics fetching in src/pihole_tui/screens/dashboard.py calling stats API endpoints
-- [ ] T039 [US2] Implement auto-refresh using Textual's set_interval() in src/pihole_tui/screens/dashboard.py with configurable interval (5s, 10s, 30s, 60s)
-- [ ] T040 [US2] Implement manual refresh action (F5 key or refresh button) in src/pihole_tui/screens/dashboard.py
-- [ ] T041 [US2] Display blocking status prominently in src/pihole_tui/screens/dashboard.py using status_indicator.py widget with green/red colour coding
-- [ ] T042 [US2] Display gravity last updated timestamp and last dashboard update time in src/pihole_tui/screens/dashboard.py
-- [ ] T043 [US2] Display queries forwarded vs cached breakdown in src/pihole_tui/screens/dashboard.py
-- [ ] T044 [US2] Implement refresh interval configuration in src/pihole_tui/screens/settings.py (preferences section)
-- [ ] T045 [US2] Update src/pihole_tui/app.py to show DashboardScreen as default screen after successful authentication
+- [X] T031 [P] [US2] Create src/pihole_tui/models/stats.py with DashboardStats, QueryTypeDistribution, and ReplyTypeDistribution models
+- [X] T032 [P] [US2] Create src/pihole_tui/api/stats.py with statistics endpoints (GET /api/stats/summary, GET /api/stats/database/summary)
+- [X] T033 [US2] Create src/pihole_tui/api/blocking.py with blocking status endpoint (GET /api/dns/blocking)
+- [X] T034 [P] [US2] Create src/pihole_tui/widgets/stat_card.py with widget for displaying individual statistic panels (queries, blocked, percentage, clients, etc.)
+- [X] T035 [US2] Implement query type distribution display in src/pihole_tui/widgets/stat_card.py using Textual's bar chart or table widgets
+- [X] T036 [US2] Implement reply type distribution display in src/pihole_tui/widgets/stat_card.py
+- [X] T037 [P] [US2] Create src/pihole_tui/screens/dashboard.py with DashboardScreen class and layout for statistics cards
+- [X] T038 [US2] Implement statistics fetching in src/pihole_tui/screens/dashboard.py calling stats API endpoints
+- [X] T039 [US2] Implement auto-refresh using Textual's set_interval() in src/pihole_tui/screens/dashboard.py with configurable interval (5s, 10s, 30s, 60s)
+- [X] T040 [US2] Implement manual refresh action (F5 key or refresh button) in src/pihole_tui/screens/dashboard.py
+- [X] T041 [US2] Display blocking status prominently in src/pihole_tui/screens/dashboard.py using status_indicator.py widget with green/red colour coding
+- [X] T042 [US2] Display gravity last updated timestamp and last dashboard update time in src/pihole_tui/screens/dashboard.py
+- [X] T043 [US2] Display queries forwarded vs cached breakdown in src/pihole_tui/screens/dashboard.py
+- [X] T044 [US2] Implement refresh interval configuration in src/pihole_tui/screens/settings.py (preferences section)
+- [X] T045 [US2] Update src/pihole_tui/app.py to show DashboardScreen as default screen after successful authentication
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently. Can authenticate and view live dashboard with all statistics.
 
