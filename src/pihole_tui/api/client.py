@@ -187,16 +187,22 @@ class PiHoleAPIClient:
                 # Parse response
                 return response.json()
 
-            except httpx.TimeoutException:
+            except httpx.TimeoutException as e:
+                logger.warning(f"Request timeout on attempt {attempt + 1}/{attempts}: {e}")
                 if attempt < attempts - 1:
                     # Exponential backoff
-                    await asyncio.sleep(RETRY_BACKOFF_BASE * (2**attempt))
+                    backoff = RETRY_BACKOFF_BASE * (2**attempt)
+                    logger.debug(f"Retrying after {backoff}s backoff...")
+                    await asyncio.sleep(backoff)
                     continue
                 raise NetworkError("Request timeout")
 
-            except httpx.NetworkError as e:
+            except (httpx.NetworkError, httpx.RemoteProtocolError) as e:
+                logger.warning(f"Network error on attempt {attempt + 1}/{attempts}: {e}")
                 if attempt < attempts - 1:
-                    await asyncio.sleep(RETRY_BACKOFF_BASE * (2**attempt))
+                    backoff = RETRY_BACKOFF_BASE * (2**attempt)
+                    logger.debug(f"Retrying after {backoff}s backoff...")
+                    await asyncio.sleep(backoff)
                     continue
                 raise NetworkError(f"Network error: {str(e)}")
 
@@ -205,6 +211,8 @@ class PiHoleAPIClient:
                 raise
 
             except Exception as e:
+                logger.error(f"Unexpected error on attempt {attempt + 1}/{attempts}: {type(e).__name__}: {e}")
+                # For other unexpected errors, don't retry
                 raise PiHoleAPIError(f"Unexpected error: {str(e)}")
 
         raise NetworkError("Max retries exceeded")

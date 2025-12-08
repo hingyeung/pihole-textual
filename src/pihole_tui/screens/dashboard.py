@@ -11,7 +11,7 @@ from textual.screen import Screen
 from textual.widgets import Header, Footer, Static, Label
 from textual.reactive import reactive
 
-from pihole_tui.api.client import PiHoleAPIError
+from pihole_tui.api.client import PiHoleAPIError, NetworkError
 from pihole_tui.api.stats import get_summary_stats
 from pihole_tui.api.blocking import get_blocking_status
 from pihole_tui.models.stats import DashboardStats
@@ -180,6 +180,12 @@ class DashboardScreen(Screen):
             # Update all widgets
             await self.update_widgets()
             logger.debug("Dashboard refresh completed successfully")
+
+        except NetworkError as e:
+            # Network errors are often transient, log but don't alarm the user
+            logger.warning(f"Network error during refresh (will retry next cycle): {e.message}")
+            # Don't show notification for network errors - they'll be retried
+            # Just keep showing the last successful data
 
         except PiHoleAPIError as e:
             # Log detailed API error

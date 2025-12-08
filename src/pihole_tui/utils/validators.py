@@ -40,7 +40,7 @@ def validate_domain(domain: str) -> tuple[bool, Optional[str]]:
     # Each label (between dots) must be 1-63 chars
     # Cannot start or end with hyphen or dot
     domain_pattern = re.compile(
-        r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$"
+        r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$"
     )
 
     if not domain_pattern.match(domain):

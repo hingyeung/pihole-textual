@@ -44,3 +44,6 @@ src/pihole_tui/pihole-tui.log
 # Note: These are in user home directory, not tracked by git anyway
 # config.toml
 # connections.enc
+
+# Debug scripts (optional - keep local only)
+debug_api.py
