@@ -17,10 +17,12 @@ from textual.widgets import Footer, Header, Static
 
 from pihole_tui.api import AuthenticationError, NetworkError, PiHoleAPIClient, SessionExpiredError
 from pihole_tui.api.auth import login, logout
+from pihole_tui.api.queries import QueriesAPI
 from pihole_tui.constants import ConnectionStatus, SESSION_RENEWAL_THRESHOLD
 from pihole_tui.models import ConnectionProfile, SessionState, UserPreferences
 from pihole_tui.screens.dashboard import DashboardScreen
 from pihole_tui.screens.login import LoginScreen, TOTPDialog
+from pihole_tui.screens.query_log import QueryLogScreen
 from pihole_tui.screens.settings import SettingsScreen
 from pihole_tui.utils.config_manager import ConfigManager
 from pihole_tui.utils.formatters import format_countdown
@@ -68,7 +70,8 @@ class PiHoleTUI(App):
 
     BINDINGS = [
         Binding("s", "show_settings", "Settings"),
-        Binding("q", "quit", "Quit"),
+        Binding("q", "show_query_log", "Query Log", show=True),
+        Binding("ctrl+q", "quit", "Quit"),
         Binding("ctrl+c", "quit", "Quit", show=False),
     ]
 
@@ -93,7 +96,7 @@ class PiHoleTUI(App):
 
         # Configure root logger
         logging.basicConfig(
-            level=logging.DEBUG,
+            level=logging.INFO,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
             handlers=[
                 logging.FileHandler(log_file),
@@ -335,6 +338,23 @@ class PiHoleTUI(App):
         # Push the dashboard screen
         dashboard = DashboardScreen(self.api_client)
         await self.push_screen(dashboard)
+
+    def action_show_query_log(self) -> None:
+        """Show query log screen."""
+        self.run_worker(self._show_query_log_worker(), exclusive=True)
+
+    async def _show_query_log_worker(self) -> None:
+        """Worker method for showing query log screen."""
+        if not self.api_client or not self.session.is_authenticated:
+            self.notify("Not authenticated. Please log in first.", severity="warning")
+            return
+
+        # Create queries API instance
+        queries_api = QueriesAPI(self.api_client)
+
+        # Push the query log screen
+        query_log = QueryLogScreen(queries_api)
+        await self.push_screen(query_log)
 
     def _start_session_renewal(self) -> None:
         """Start background task for session renewal."""

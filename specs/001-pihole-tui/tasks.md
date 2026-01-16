@@ -117,24 +117,24 @@
 
 ### Implementation for User Story 3
 
-- [ ] T046 [P] [US3] Create src/pihole_tui/models/query.py with QueryLogEntry, QueryLogFilters, and QueryLogResponse models
-- [ ] T047 [P] [US3] Create src/pihole_tui/api/queries.py with query log endpoint (GET /api/queries with pagination and filtering parameters)
-- [ ] T048 [P] [US3] Create src/pihole_tui/widgets/query_table.py with custom DataTable widget for displaying query log entries with columns (timestamp, client, domain, type, status, reply, response time)
-- [ ] T049 [US3] Implement query status colour coding in src/pihole_tui/widgets/query_table.py (green=allowed, red=blocked, blue=cached, yellow=forwarded)
-- [ ] T050 [P] [US3] Create src/pihole_tui/screens/query_log.py with QueryLogScreen class and filter bar UI
-- [ ] T051 [US3] Implement status filter dropdown in src/pihole_tui/screens/query_log.py (All, Blocked, Allowed, Forwarded, Cached)
-- [ ] T052 [US3] Implement client filter input in src/pihole_tui/screens/query_log.py (IP address or hostname search)
-- [ ] T053 [US3] Implement domain search input in src/pihole_tui/screens/query_log.py (pattern matching with wildcard support)
-- [ ] T054 [US3] Implement time range filter in src/pihole_tui/screens/query_log.py with presets (last hour, 24h, 7 days) and custom range picker
-- [ ] T055 [US3] Implement query type filter in src/pihole_tui/screens/query_log.py (A, AAAA, PTR, SRV, ANY, etc.)
-- [ ] T056 [US3] Implement reply type filter in src/pihole_tui/screens/query_log.py (IP, CNAME, NODATA, NXDOMAIN)
-- [ ] T057 [US3] Implement column sorting in src/pihole_tui/widgets/query_table.py (click headers to sort by timestamp, client, domain, status)
-- [ ] T058 [US3] Implement pagination/virtual scrolling in src/pihole_tui/screens/query_log.py using API page/limit parameters
-- [ ] T059 [US3] Implement real-time updates in src/pihole_tui/screens/query_log.py using set_interval() to poll for new queries every 3-5 seconds
-- [ ] T060 [US3] Implement query details modal in src/pihole_tui/screens/query_log.py showing full query information including blocklist name
-- [ ] T061 [US3] Implement CSV export functionality in src/pihole_tui/screens/query_log.py (export currently filtered queries to file)
-- [ ] T062 [US3] Implement context menu in src/pihole_tui/widgets/query_table.py with "Add to Allowlist" and "Add to Blocklist" actions
-- [ ] T063 [US3] Update src/pihole_tui/app.py to add Query Log screen to navigation (keyboard shortcut Q)
+- [X] T046 [P] [US3] Create src/pihole_tui/models/query.py with QueryLogEntry, QueryLogFilters, and QueryLogResponse models
+- [X] T047 [P] [US3] Create src/pihole_tui/api/queries.py with query log endpoint (GET /api/queries with pagination and filtering parameters)
+- [X] T048 [P] [US3] Create src/pihole_tui/widgets/query_table.py with custom DataTable widget for displaying query log entries with columns (timestamp, client, domain, type, status, reply, response time)
+- [X] T049 [US3] Implement query status colour coding in src/pihole_tui/widgets/query_table.py (green=allowed, red=blocked, blue=cached, yellow=forwarded)
+- [X] T050 [P] [US3] Create src/pihole_tui/screens/query_log.py with QueryLogScreen class and filter bar UI
+- [X] T051 [US3] Implement status filter dropdown in src/pihole_tui/screens/query_log.py (All, Blocked, Allowed, Forwarded, Cached)
+- [X] T052 [US3] Implement client filter input in src/pihole_tui/screens/query_log.py (IP address or hostname search)
+- [X] T053 [US3] Implement domain search input in src/pihole_tui/screens/query_log.py (pattern matching with wildcard support)
+- [X] T054 [US3] Implement time range filter in src/pihole_tui/screens/query_log.py with presets (last hour, 24h, 7 days) and custom range picker
+- [X] T055 [US3] Implement query type filter in src/pihole_tui/screens/query_log.py (A, AAAA, PTR, SRV, ANY, etc.)
+- [X] T056 [US3] Implement reply type filter in src/pihole_tui/screens/query_log.py (IP, CNAME, NODATA, NXDOMAIN)
+- [X] T057 [US3] Implement column sorting in src/pihole_tui/widgets/query_table.py (click headers to sort by timestamp, client, domain, status)
+- [X] T058 [US3] Implement pagination/virtual scrolling in src/pihole_tui/screens/query_log.py using API page/limit parameters
+- [X] T059 [US3] Implement real-time updates in src/pihole_tui/screens/query_log.py using set_interval() to poll for new queries every 3-5 seconds
+- [X] T060 [US3] Implement query details modal in src/pihole_tui/screens/query_log.py showing full query information including blocklist name
+- [X] T061 [US3] Implement CSV export functionality in src/pihole_tui/screens/query_log.py (export currently filtered queries to file)
+- [X] T062 [US3] Implement context menu in src/pihole_tui/widgets/query_table.py with "Add to Allowlist" and "Add to Blocklist" actions
+- [X] T063 [US3] Update src/pihole_tui/app.py to add Query Log screen to navigation (keyboard shortcut Q)
 
 **Checkpoint**: All three user stories (auth, dashboard, query log) should now be independently functional
 

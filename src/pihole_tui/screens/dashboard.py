@@ -317,7 +317,14 @@ class DashboardScreen(Screen):
 
     def action_query_log(self) -> None:
         """Navigate to query log screen."""
-        self.notify("Query log not yet implemented", severity="warning")
+        from pihole_tui.api.queries import QueriesAPI
+        from pihole_tui.screens.query_log import QueryLogScreen
+
+        # Create queries API instance
+        queries_api = QueriesAPI(self.api_client)
+
+        # Push the query log screen
+        self.app.push_screen(QueryLogScreen(queries_api))
 
     def action_domains(self) -> None:
         """Navigate to domains screen."""
