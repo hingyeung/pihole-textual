@@ -2,6 +2,8 @@
 
 A comprehensive terminal user interface (TUI) for managing Pi-hole network-wide ad blocking.
 
+![Pi-hole TUI Homepage](docs/homepage.png)
+
 ## Features
 
 - **Secure Authentication**: Connect to Pi-hole with session management and 2FA support
