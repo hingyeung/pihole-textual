@@ -173,27 +173,27 @@
 
 ### Implementation for User Story 5
 
-- [ ] T076 [P] [US5] Create src/pihole_tui/models/domain.py with DomainListEntry, DomainListFilters, DomainListResponse, DomainAddRequest, DomainUpdateRequest, BulkDomainOperation, DomainImportRequest, DomainImportResult models
-- [ ] T077 [P] [US5] Create src/pihole_tui/api/domains.py with domain list endpoints (GET /api/domains, POST /api/domains, PUT /api/domains/{id}, DELETE /api/domains/{id}, PATCH /api/domains/{id})
-- [ ] T078 [P] [US5] Create src/pihole_tui/widgets/domain_list.py with custom widget displaying domain entries in table format with checkboxes for multi-select
-- [ ] T079 [US5] Implement domain status toggle (enable/disable) in src/pihole_tui/widgets/domain_list.py with visual indicators
-- [ ] T080 [P] [US5] Create src/pihole_tui/screens/domains.py with DomainsScreen class featuring tabbed view for Allowlist and Blocklist
-- [ ] T081 [US5] Implement allowlist tab in src/pihole_tui/screens/domains.py displaying allowlist entries using domain_list.py widget
-- [ ] T082 [US5] Implement blocklist tab in src/pihole_tui/screens/domains.py displaying blocklist entries using domain_list.py widget
-- [ ] T083 [US5] Implement search/filter bar in src/pihole_tui/screens/domains.py for filtering domains by pattern
-- [ ] T084 [US5] Implement "Add Domain" dialog in src/pihole_tui/screens/domains.py with domain input, comment input, enabled checkbox, and list type selection
-- [ ] T085 [US5] Implement domain validation in "Add Domain" dialog using validators.py (check domain format, wildcard patterns like *.example.com)
-- [ ] T086 [US5] Implement duplicate detection in "Add Domain" dialog showing error if domain already exists in list
-- [ ] T087 [US5] Implement "Edit Domain" dialog in src/pihole_tui/screens/domains.py for updating comment and enabled status
-- [ ] T088 [US5] Implement delete action in src/pihole_tui/screens/domains.py with confirmation dialog
-- [ ] T089 [US5] Implement multi-select functionality in src/pihole_tui/widgets/domain_list.py (checkboxes, Shift+Click, Ctrl+Click)
-- [ ] T090 [US5] Implement bulk actions menu in src/pihole_tui/screens/domains.py with Enable Selected, Disable Selected, Delete Selected options
-- [ ] T091 [US5] Implement bulk operation execution in src/pihole_tui/screens/domains.py with progress indicator and sequential API calls
-- [ ] T092 [US5] Implement import dialog in src/pihole_tui/screens/domains.py with file picker, preview, validation, and skip duplicates option
-- [ ] T093 [US5] Implement bulk import processing in src/pihole_tui/screens/domains.py (read file, validate each domain, call API sequentially, show result summary)
-- [ ] T094 [US5] Implement export functionality in src/pihole_tui/screens/domains.py to save current list to text file (one domain per line)
-- [ ] T095 [US5] Implement tab switching (Ctrl+Tab) between Allowlist and Blocklist in src/pihole_tui/screens/domains.py
-- [ ] T096 [US5] Update src/pihole_tui/app.py to add Domains screen to navigation (keyboard shortcut D)
+- [X] T076 [P] [US5] Create src/pihole_tui/models/domain.py with DomainListEntry, DomainListFilters, DomainListResponse, DomainAddRequest, DomainUpdateRequest, BulkDomainOperation, DomainImportRequest, DomainImportResult models
+- [X] T077 [P] [US5] Create src/pihole_tui/api/domains.py with domain list endpoints (GET /api/domains, POST /api/domains, PUT /api/domains/{id}, DELETE /api/domains/{id}, PATCH /api/domains/{id})
+- [X] T078 [P] [US5] Create src/pihole_tui/widgets/domain_list.py with custom widget displaying domain entries in table format with checkboxes for multi-select
+- [X] T079 [US5] Implement domain status toggle (enable/disable) in src/pihole_tui/widgets/domain_list.py with visual indicators
+- [X] T080 [P] [US5] Create src/pihole_tui/screens/domains.py with DomainsScreen class featuring tabbed view for Allowlist and Blocklist
+- [X] T081 [US5] Implement allowlist tab in src/pihole_tui/screens/domains.py displaying allowlist entries using domain_list.py widget
+- [X] T082 [US5] Implement blocklist tab in src/pihole_tui/screens/domains.py displaying blocklist entries using domain_list.py widget
+- [X] T083 [US5] Implement search/filter bar in src/pihole_tui/screens/domains.py for filtering domains by pattern
+- [X] T084 [US5] Implement "Add Domain" dialog in src/pihole_tui/screens/domains.py with domain input, comment input, enabled checkbox, and list type selection
+- [X] T085 [US5] Implement domain validation in "Add Domain" dialog using validators.py (check domain format, wildcard patterns like *.example.com)
+- [X] T086 [US5] Implement duplicate detection in "Add Domain" dialog showing error if domain already exists in list
+- [X] T087 [US5] Implement "Edit Domain" dialog in src/pihole_tui/screens/domains.py for updating comment and enabled status
+- [X] T088 [US5] Implement delete action in src/pihole_tui/screens/domains.py with confirmation dialog
+- [X] T089 [US5] Implement multi-select functionality in src/pihole_tui/widgets/domain_list.py (checkboxes, Shift+Click, Ctrl+Click)
+- [X] T090 [US5] Implement bulk actions menu in src/pihole_tui/screens/domains.py with Enable Selected, Disable Selected, Delete Selected options
+- [X] T091 [US5] Implement bulk operation execution in src/pihole_tui/screens/domains.py with progress indicator and sequential API calls
+- [X] T092 [US5] Implement import dialog in src/pihole_tui/screens/domains.py with file picker, preview, validation, and skip duplicates option
+- [X] T093 [US5] Implement bulk import processing in src/pihole_tui/screens/domains.py (read file, validate each domain, call API sequentially, show result summary)
+- [X] T094 [US5] Implement export functionality in src/pihole_tui/screens/domains.py to save current list to text file (one domain per line)
+- [X] T095 [US5] Implement tab switching (Ctrl+Tab) between Allowlist and Blocklist in src/pihole_tui/screens/domains.py
+- [X] T096 [US5] Update src/pihole_tui/app.py to add Domains screen to navigation (keyboard shortcut D)
 
 **Checkpoint**: All five user stories should now be independently functional. Full Phase 1 feature set complete.
 
@@ -203,7 +203,7 @@
 
 **Purpose**: Improvements that affect multiple user stories and final polish
 
-- [ ] T097 [P] Implement help screen in src/pihole_tui/app.py showing keyboard shortcuts and basic usage (F1 to open)
+- [X] T097 [P] Implement help screen in src/pihole_tui/app.py showing keyboard shortcuts and basic usage (F1 to open)
 - [ ] T098 [P] Implement graceful terminal resize handling in all screens ensuring layout adapts without corruption
 - [ ] T099 [P] Add loading indicators to all API operations showing visual feedback during network requests
 - [ ] T100 [P] Implement error notification system in src/pihole_tui/app.py for displaying user-friendly error messages with recovery options

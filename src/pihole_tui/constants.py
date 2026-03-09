@@ -17,6 +17,8 @@ API_STATS_DATABASE_SUMMARY = "/api/stats/database/summary"
 API_DNS_BLOCKING = "/api/dns/blocking"
 API_QUERIES = "/api/queries"
 API_DOMAINS = "/api/domains"
+# Pi-hole v6 uses path-based type filtering with "allow" and "deny"
+DOMAIN_TYPE_PATHS = {0: "allow", 1: "deny"}  # DomainListType.ALLOW=0, BLOCK=1
 
 # Configuration Paths
 CONFIG_DIR_NAME = "pihole-tui"

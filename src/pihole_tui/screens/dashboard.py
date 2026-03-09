@@ -701,7 +701,9 @@ class DashboardScreen(Screen):
         self.app.push_screen(QueryLogScreen(queries_api))
 
     def action_domains(self) -> None:
-        self.notify("Domain management not yet implemented", severity="warning")
+        from pihole_tui.screens.domains import DomainsScreen
+
+        self.app.push_screen(DomainsScreen(self.api_client))
 
     def update_refresh_interval(self, interval: int) -> None:
         """Update auto-refresh interval.

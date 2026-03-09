@@ -69,8 +69,10 @@ class PiHoleTUI(App):
     """
 
     BINDINGS = [
+        Binding("f1", "show_help", "Help", show=True),
         Binding("s", "show_settings", "Settings"),
         Binding("q", "show_query_log", "Query Log", show=True),
+        Binding("d", "show_domains", "Domains", show=True),
         Binding("ctrl+b", "toggle_blocking", "Toggle Blocking", show=True),
         Binding("ctrl+q", "quit", "Quit"),
         Binding("ctrl+c", "quit", "Quit", show=False),
@@ -95,13 +97,14 @@ class PiHoleTUI(App):
         log_dir.mkdir(parents=True, exist_ok=True)
         log_file = log_dir / "pihole-tui.log"
 
-        # Configure root logger
+        # Configure root logger — file only.
+        # StreamHandler writes to stdout which interferes with Textual's terminal
+        # rendering and causes visible flicker on every log line.
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
             handlers=[
                 logging.FileHandler(log_file),
-                logging.StreamHandler()  # Also log to console for textual console
             ]
         )
 
@@ -357,6 +360,16 @@ class PiHoleTUI(App):
         query_log = QueryLogScreen(queries_api)
         await self.push_screen(query_log)
 
+    def action_show_domains(self) -> None:
+        """Show domain management screen (D key, accessible from any screen)."""
+        if not self.api_client or not self.session.is_authenticated:
+            self.notify("Not authenticated. Please log in first.", severity="warning")
+            return
+
+        from pihole_tui.screens.domains import DomainsScreen
+
+        self.push_screen(DomainsScreen(self.api_client))
+
     def _start_session_renewal(self) -> None:
         """Start background task for session renewal."""
         if self._renewal_task:
@@ -443,6 +456,11 @@ class PiHoleTUI(App):
                 severity="warning",
                 timeout=4,
             )
+
+    def action_show_help(self) -> None:
+        """Show help screen (F1)."""
+        from pihole_tui.screens.help import HelpScreen
+        self.push_screen(HelpScreen())
 
     def action_show_settings(self) -> None:
         """Show settings screen."""
