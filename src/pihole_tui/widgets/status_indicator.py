@@ -89,3 +89,59 @@ class StatusIndicator(Static):
             status: New connection status
         """
         self.status = status
+
+
+class BlockingIndicator(Static):
+    """Compact blocking-status widget for use in status bars.
+
+    Shows one of three states:
+    - *enabled*      → green  ``● Blocking``
+    - *disabled*     → red    ``● Disabled``
+    - *temp_disabled*→ yellow ``⏱ Disabled (Xm Ys)``
+    """
+
+    CSS = """
+    BlockingIndicator {
+        width: auto;
+        height: 1;
+        padding: 0 1;
+    }
+
+    BlockingIndicator.blocking-enabled {
+        color: $success;
+    }
+
+    BlockingIndicator.blocking-disabled {
+        color: $error;
+    }
+
+    BlockingIndicator.blocking-temp-disabled {
+        color: $warning;
+    }
+    """
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__("● Blocking", **kwargs)
+
+    def set_enabled(self) -> None:
+        """Show enabled (green) state."""
+        self.remove_class("blocking-disabled", "blocking-temp-disabled")
+        self.add_class("blocking-enabled")
+        self.update("● Blocking")
+
+    def set_disabled(self) -> None:
+        """Show permanently disabled (red) state."""
+        self.remove_class("blocking-enabled", "blocking-temp-disabled")
+        self.add_class("blocking-disabled")
+        self.update("● Disabled")
+
+    def set_temp_disabled(self, timer_text: str = "") -> None:
+        """Show temporarily disabled (yellow) state with optional countdown.
+
+        Args:
+            timer_text: Human-readable time remaining, e.g. ``"4m 30s"``.
+        """
+        self.remove_class("blocking-enabled", "blocking-disabled")
+        self.add_class("blocking-temp-disabled")
+        suffix = f" ({timer_text})" if timer_text else ""
+        self.update(f"⏱ Disabled{suffix}")

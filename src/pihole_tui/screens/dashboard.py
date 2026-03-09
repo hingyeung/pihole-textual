@@ -1,41 +1,278 @@
-"""Dashboard screen for displaying Pi-hole statistics."""
+"""Dashboard screen for displaying Pi-hole statistics and blocking control."""
 
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Tuple
 
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import Container, Horizontal, Vertical, Grid
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Label
+from textual.containers import Container, Grid, Horizontal, Vertical
 from textual.reactive import reactive
+from textual.screen import ModalScreen, Screen
+from textual.widgets import (
+    Button,
+    Footer,
+    Header,
+    Input,
+    Label,
+    Static,
+)
 
+from pihole_tui.api.blocking import get_blocking_status, set_blocking_status
 from pihole_tui.api.client import PiHoleAPIError, NetworkError
 from pihole_tui.api.stats import get_summary_stats
-from pihole_tui.api.blocking import get_blocking_status
-from pihole_tui.models.stats import DashboardStats
-from pihole_tui.widgets.stat_card import (
-    StatCard,
-    DistributionCard,
-    BlockingStatusCard,
+from pihole_tui.constants import (
+    BLOCKING_TIMER_PRESETS,
+    DEFAULT_DASHBOARD_REFRESH_INTERVAL,
+    LAYOUT_BREAKPOINT_2COL,
+    LAYOUT_BREAKPOINT_3COL,
 )
+from pihole_tui.models.blocking import BlockingToggleRequest
+from pihole_tui.models.stats import DashboardStats
 from pihole_tui.utils.formatters import (
+    format_datetime,
+    format_duration,
     format_number,
     format_percentage,
-    format_datetime,
 )
-from pihole_tui.constants import (
-    DEFAULT_DASHBOARD_REFRESH_INTERVAL,
-    LAYOUT_BREAKPOINT_3COL,
-    LAYOUT_BREAKPOINT_2COL,
+from pihole_tui.widgets.countdown_timer import CountdownTimer
+from pihole_tui.widgets.stat_card import (
+    BlockingStatusCard,
+    DistributionCard,
+    StatCard,
 )
 
 logger = logging.getLogger(__name__)
 
 
+# ---------------------------------------------------------------------------
+# Dialogs
+# ---------------------------------------------------------------------------
+
+class BlockingConfirmDialog(ModalScreen):
+    """Confirmation dialog for toggling DNS blocking on or off.
+
+    Dismisses with ``True`` when the user confirms, ``False`` otherwise.
+    """
+
+    DEFAULT_CSS = """
+    BlockingConfirmDialog {
+        align: center middle;
+    }
+
+    BlockingConfirmDialog #dialog {
+        width: 50;
+        height: auto;
+        border: solid $warning;
+        background: $surface;
+        padding: 1 2;
+    }
+
+    BlockingConfirmDialog #dialog-title {
+        text-style: bold;
+        text-align: center;
+        width: 100%;
+        padding-bottom: 1;
+    }
+
+    BlockingConfirmDialog #dialog-body {
+        text-align: center;
+        width: 100%;
+        padding-bottom: 1;
+    }
+
+    BlockingConfirmDialog #buttons {
+        layout: horizontal;
+        align: center middle;
+        height: auto;
+        width: 100%;
+    }
+
+    BlockingConfirmDialog Button {
+        margin: 0 1;
+    }
+    """
+
+    def __init__(self, currently_enabled: bool, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._currently_enabled = currently_enabled
+
+    def compose(self) -> ComposeResult:
+        action = "Disable" if self._currently_enabled else "Enable"
+        with Vertical(id="dialog"):
+            yield Label(f"{action} DNS Blocking", id="dialog-title")
+            yield Label(
+                f"Are you sure you want to {action.lower()} DNS blocking?",
+                id="dialog-body",
+            )
+            with Horizontal(id="buttons"):
+                yield Button(action, variant="warning", id="btn-confirm")
+                yield Button("Cancel", variant="default", id="btn-cancel")
+
+    @on(Button.Pressed, "#btn-confirm")
+    def confirm(self) -> None:
+        self.dismiss(True)
+
+    @on(Button.Pressed, "#btn-cancel")
+    def cancel(self) -> None:
+        self.dismiss(False)
+
+
+class DurationDialog(ModalScreen):
+    """Duration selection dialog for temporarily disabling blocking.
+
+    Dismisses with a ``(seconds, reason)`` tuple, ``None`` for permanent
+    disable, or raises ``False`` if the user cancels.
+    """
+
+    DEFAULT_CSS = """
+    DurationDialog {
+        align: center middle;
+    }
+
+    DurationDialog #dialog {
+        width: 60;
+        height: auto;
+        border: solid $warning;
+        background: $surface;
+        padding: 1 2;
+    }
+
+    DurationDialog #dialog-title {
+        text-style: bold;
+        text-align: center;
+        width: 100%;
+        padding-bottom: 1;
+    }
+
+    DurationDialog #presets {
+        layout: horizontal;
+        height: auto;
+        width: 100%;
+        padding-bottom: 1;
+    }
+
+    DurationDialog .preset-btn {
+        margin: 0 1 0 0;
+    }
+
+    DurationDialog #custom-row {
+        layout: horizontal;
+        height: auto;
+        width: 100%;
+        padding-bottom: 1;
+    }
+
+    DurationDialog #custom-label {
+        width: auto;
+        padding: 1 1 0 0;
+    }
+
+    DurationDialog #custom-input {
+        width: 1fr;
+    }
+
+    DurationDialog #reason-label {
+        padding-bottom: 0;
+    }
+
+    DurationDialog #reason-input {
+        width: 100%;
+        margin-bottom: 1;
+    }
+
+    DurationDialog #buttons {
+        layout: horizontal;
+        align: center middle;
+        height: auto;
+        width: 100%;
+    }
+
+    DurationDialog Button {
+        margin: 0 1;
+    }
+    """
+
+    # Preset labels mapped to their second values from constants
+    _PRESET_LABELS = ["30s", "1m", "5m", "15m", "30m", "1h"]
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="dialog"):
+            yield Label("How long to disable blocking?", id="dialog-title")
+
+            # Preset buttons
+            with Horizontal(id="presets"):
+                for label, seconds in zip(self._PRESET_LABELS, BLOCKING_TIMER_PRESETS):
+                    yield Button(
+                        label,
+                        variant="warning",
+                        id=f"preset-{seconds}",
+                        classes="preset-btn",
+                    )
+
+            # Custom duration
+            with Horizontal(id="custom-row"):
+                yield Label("Custom (seconds):", id="custom-label")
+                yield Input(placeholder="e.g. 120", id="custom-input")
+
+            # Optional reason
+            yield Label("Reason (optional):", id="reason-label")
+            yield Input(placeholder="e.g. testing, maintenance…", id="reason-input")
+
+            # Action buttons
+            with Horizontal(id="buttons"):
+                yield Button("Permanent", variant="error", id="btn-permanent")
+                yield Button("Cancel", variant="default", id="btn-cancel")
+
+    # ------------------------------------------------------------------
+    # Handlers
+    # ------------------------------------------------------------------
+
+    @on(Button.Pressed, ".preset-btn")
+    def _preset_pressed(self, event: Button.Pressed) -> None:
+        # Button id is "preset-<seconds>"
+        try:
+            seconds = int(str(event.button.id).replace("preset-", ""))
+        except (ValueError, AttributeError):
+            return
+        reason = self._get_reason()
+        self.dismiss((seconds, reason))
+
+    @on(Button.Pressed, "#btn-permanent")
+    def _permanent(self) -> None:
+        reason = self._get_reason()
+        self.dismiss((None, reason))  # None seconds = permanent
+
+    @on(Button.Pressed, "#btn-cancel")
+    def _cancel(self) -> None:
+        self.dismiss(False)
+
+    @on(Input.Submitted, "#custom-input")
+    def _custom_submitted(self) -> None:
+        custom_input = self.query_one("#custom-input", Input)
+        try:
+            seconds = int(custom_input.value.strip())
+            if seconds > 0:
+                reason = self._get_reason()
+                self.dismiss((seconds, reason))
+            else:
+                self.notify("Please enter a positive number of seconds.", severity="warning")
+        except ValueError:
+            self.notify("Please enter a valid number of seconds.", severity="warning")
+
+    def _get_reason(self) -> str:
+        try:
+            return self.query_one("#reason-input", Input).value.strip()
+        except Exception:
+            return ""
+
+
+# ---------------------------------------------------------------------------
+# Dashboard screen
+# ---------------------------------------------------------------------------
+
 class DashboardScreen(Screen):
-    """Main dashboard screen showing Pi-hole statistics."""
+    """Main dashboard screen showing Pi-hole statistics and blocking control."""
 
     BINDINGS = [
         ("f5", "refresh", "Refresh"),
@@ -98,16 +335,36 @@ class DashboardScreen(Screen):
         width: 1fr;
         color: $text-muted;
     }
+
+    DashboardScreen #countdown-container {
+        dock: bottom;
+        layout: horizontal;
+        height: 1;
+        background: $warning 30%;
+        padding: 0 2;
+        display: none;
+    }
+
+    DashboardScreen #countdown-container.visible {
+        display: block;
+    }
+
+    DashboardScreen #countdown-label {
+        color: $warning;
+        text-style: bold;
+    }
     """
 
-    # Reactive properties
+    # Reactive state
     stats: reactive[Optional[DashboardStats]] = reactive(None)
     refresh_interval: reactive[int] = reactive(DEFAULT_DASHBOARD_REFRESH_INTERVAL)
     last_update: reactive[Optional[datetime]] = reactive(None)
     is_loading: reactive[bool] = reactive(False)
+    blocking_enabled: reactive[bool] = reactive(True)
+    blocking_timer_seconds: reactive[Optional[int]] = reactive(None)
 
     def __init__(self, api_client, **kwargs):
-        """Initialize dashboard screen.
+        """Initialise dashboard screen.
 
         Args:
             api_client: Authenticated API client
@@ -117,14 +374,15 @@ class DashboardScreen(Screen):
         self.api_client = api_client
         self._refresh_timer = None
 
+    # ------------------------------------------------------------------
+    # Compose
+    # ------------------------------------------------------------------
+
     def compose(self) -> ComposeResult:
-        """Compose the dashboard layout."""
         yield Header()
 
-        # Title
         yield Label("Pi-hole Dashboard", classes="dashboard-title")
 
-        # Main statistics grid - cards are direct children
         with Grid(classes="dashboard-container"):
             yield BlockingStatusCard(id="blocking-status")
             yield StatCard("Total Queries", id="stat-queries-total")
@@ -138,63 +396,50 @@ class DashboardScreen(Screen):
             yield DistributionCard("Query Type Distribution", id="dist-query-types")
             yield DistributionCard("Reply Type Distribution", id="dist-reply-types")
 
-        # Footer with timestamps
+        # Countdown banner (hidden until temp-disable is active)
+        with Container(id="countdown-container"):
+            yield Label("Blocking disabled — re-enabling in: ", id="countdown-label")
+            yield CountdownTimer(id="countdown-timer")
+
         with Container(classes="footer-info"):
             yield Label("Gravity last updated: --", id="footer-gravity")
             yield Label("Last update: --", id="footer-last-update")
 
         yield Footer()
 
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
+
     async def on_mount(self) -> None:
-        """Handle mount event."""
-        # Set initial layout based on current terminal size (after refresh)
         self.call_after_refresh(self._apply_responsive_layout)
-
-        # Initial data fetch
         await self.refresh_data()
-
-        # Start auto-refresh timer
-        self._refresh_timer = self.set_interval(
-            self.refresh_interval, self.refresh_data
-        )
+        self._refresh_timer = self.set_interval(self.refresh_interval, self.refresh_data)
 
     def on_unmount(self) -> None:
-        """Handle unmount event."""
-        # Stop auto-refresh timer
         if self._refresh_timer:
             self._refresh_timer.stop()
 
     def on_resize(self, event) -> None:
-        """Handle terminal resize events.
-
-        Args:
-            event: Resize event containing new terminal dimensions
-        """
         self._apply_responsive_layout()
 
+    # ------------------------------------------------------------------
+    # Responsive layout
+    # ------------------------------------------------------------------
+
     def _apply_responsive_layout(self) -> None:
-        """Apply appropriate layout based on current terminal width.
-
-        Uses breakpoints to switch between:
-        - 3-column layout: 120+ characters wide
-        - 2-column layout: 80-119 characters wide
-        - 1-column layout: below 80 characters
-        """
         terminal_width = self.app.size.width
-
-        # Remove all layout classes first
         self.remove_class("layout-3col", "layout-2col", "layout-1col")
-
-        # Apply appropriate layout class based on breakpoints
         if terminal_width >= LAYOUT_BREAKPOINT_3COL:
             self.add_class("layout-3col")
-            logger.debug(f"Applied 3-column layout (width: {terminal_width})")
         elif terminal_width >= LAYOUT_BREAKPOINT_2COL:
             self.add_class("layout-2col")
-            logger.debug(f"Applied 2-column layout (width: {terminal_width})")
         else:
             self.add_class("layout-1col")
-            logger.debug(f"Applied 1-column layout (width: {terminal_width})")
+
+    # ------------------------------------------------------------------
+    # Data refresh
+    # ------------------------------------------------------------------
 
     async def refresh_data(self) -> None:
         """Fetch fresh statistics from Pi-hole API."""
@@ -202,50 +447,29 @@ class DashboardScreen(Screen):
             return
 
         self.is_loading = True
-
         try:
-            # Fetch statistics
             logger.debug("Refreshing dashboard statistics")
             stats = await get_summary_stats(self.api_client)
             self.stats = stats
             self.last_update = datetime.now()
-
-            # Update all widgets
             await self.update_widgets()
             logger.debug("Dashboard refresh completed successfully")
 
         except NetworkError as e:
-            # Network errors are often transient, log but don't alarm the user
-            logger.warning(f"Network error during refresh (will retry next cycle): {e.message}")
-            # Don't show notification for network errors - they'll be retried
-            # Just keep showing the last successful data
+            logger.warning(f"Network error during refresh (will retry): {e.message}")
 
         except PiHoleAPIError as e:
-            # Log detailed API error
             logger.error(f"API error during refresh: {e.message} (status: {e.status_code})")
-            logger.debug(f"Error details: {e.details}")
-
-            # Show user-friendly error notification
-            error_msg = f"HTTP {e.status_code}: {e.message}"
-            if e.details:
-                error_msg += f" - {e.details}"
-
             self.notify(
-                f"Failed to refresh statistics: {error_msg}",
+                f"Failed to refresh statistics: HTTP {e.status_code}: {e.message}",
                 severity="error",
                 timeout=10,
             )
 
-        except Exception as e:
-            # Log unexpected error
+        except Exception:
             logger.exception("Unexpected error during dashboard refresh")
+            self.notify("Failed to refresh statistics", severity="error", timeout=10)
 
-            # Show error notification
-            self.notify(
-                f"Failed to refresh statistics: {type(e).__name__}: {str(e)}",
-                severity="error",
-                timeout=10,
-            )
         finally:
             self.is_loading = False
 
@@ -256,11 +480,13 @@ class DashboardScreen(Screen):
 
         stats = self.stats
 
-        # Update blocking status
+        # Keep local reactive state in sync with what the API reports
+        # (only update if we're not mid-toggle to avoid race conditions)
+        self.blocking_enabled = stats.blocking_status
+
         blocking_card = self.query_one("#blocking-status", BlockingStatusCard)
         blocking_card.update_status(stats.blocking_status)
 
-        # Update main statistics
         self.query_one("#stat-queries-total", StatCard).update_value(
             format_number(stats.queries_total)
         )
@@ -279,8 +505,6 @@ class DashboardScreen(Screen):
         self.query_one("#stat-clients-ever", StatCard).update_value(
             format_number(stats.clients_ever_seen)
         )
-
-        # Update forwarded vs cached breakdown
         self.query_one("#stat-queries-forwarded", StatCard).update_value(
             format_number(stats.queries_forwarded)
         )
@@ -288,51 +512,196 @@ class DashboardScreen(Screen):
             format_number(stats.queries_cached)
         )
 
-        # Update distributions
         query_type_card = self.query_one("#dist-query-types", DistributionCard)
         query_type_card.update_distributions(stats.query_type_distribution)
 
         reply_type_card = self.query_one("#dist-reply-types", DistributionCard)
         reply_type_card.update_distributions(stats.reply_type_distribution)
 
-        # Update footer timestamps
         gravity_label = self.query_one("#footer-gravity", Label)
         if stats.gravity_last_updated:
-            gravity_text = f"Gravity last updated: {format_datetime(stats.gravity_last_updated)}"
+            gravity_label.update(
+                f"Gravity last updated: {format_datetime(stats.gravity_last_updated)}"
+            )
         else:
-            gravity_text = "Gravity last updated: Unknown"
-        gravity_label.update(gravity_text)
+            gravity_label.update("Gravity last updated: Unknown")
 
         last_update_label = self.query_one("#footer-last-update", Label)
         if self.last_update:
-            update_text = f"Last update: {format_datetime(self.last_update)}"
+            last_update_label.update(f"Last update: {format_datetime(self.last_update)}")
+
+    # ------------------------------------------------------------------
+    # Blocking control — T067-T075
+    # ------------------------------------------------------------------
+
+    def action_toggle_blocking(self) -> None:
+        """Toggle blocking on/off — launches the worker that drives the dialogs."""
+        self.run_worker(self._toggle_blocking_worker(), exclusive=True)
+
+    async def _toggle_blocking_worker(self) -> None:
+        """Worker: show confirmation → duration dialog → perform API call.
+
+        Must run inside a Textual worker so that ``push_screen`` with
+        ``wait_for_dismiss=True`` is permitted.
+        """
+        confirmed = await self.app.push_screen(
+            BlockingConfirmDialog(self.blocking_enabled),
+            wait_for_dismiss=True,
+        )
+        if not confirmed:
+            return  # User cancelled
+
+        if self.blocking_enabled:
+            # Currently enabled → disabling: ask how long
+            result = await self.app.push_screen(
+                DurationDialog(),
+                wait_for_dismiss=True,
+            )
+            if result is False:
+                return  # User cancelled the duration dialog
+
+            seconds, reason = result  # seconds is None for permanent
+            await self._perform_disable(seconds, reason)
         else:
-            update_text = "Last update: --"
-        last_update_label.update(update_text)
+            # Currently disabled (or temp-disabled) → re-enable immediately
+            await self._perform_enable()
+
+    async def _perform_enable(self) -> None:
+        """Re-enable blocking and stop any active countdown."""
+        try:
+            request = BlockingToggleRequest(blocking=True)
+            await set_blocking_status(
+                self.api_client,
+                enabled=True,
+            )
+
+            # Stop countdown banner
+            self._stop_countdown()
+            self.blocking_enabled = True
+            self.blocking_timer_seconds = None
+
+            # Update blocking status card
+            blocking_card = self.query_one("#blocking-status", BlockingStatusCard)
+            blocking_card.update_status(True)
+
+            self.notify("DNS blocking enabled ✓", severity="information", timeout=4)
+            logger.info("Blocking enabled by user")
+
+        except NetworkError as e:
+            logger.error(f"Network error enabling blocking: {e.message}")
+            self.notify(
+                f"Network error — could not enable blocking: {e.message}",
+                severity="error",
+                timeout=8,
+            )
+        except PiHoleAPIError as e:
+            logger.error(f"API error enabling blocking: {e.message}")
+            self.notify(
+                f"Failed to enable blocking: {e.message}",
+                severity="error",
+                timeout=8,
+            )
+        except Exception:
+            logger.exception("Unexpected error enabling blocking")
+            self.notify("Unexpected error enabling blocking", severity="error", timeout=8)
+
+    async def _perform_disable(self, seconds: Optional[int], reason: str) -> None:
+        """Disable blocking with an optional timer.
+
+        Args:
+            seconds: Duration in seconds, or ``None`` for permanent.
+            reason: Optional user-supplied reason (for logging; API ignores it).
+        """
+        try:
+            await set_blocking_status(
+                self.api_client,
+                enabled=False,
+                timer=seconds,
+            )
+
+            self.blocking_enabled = False
+            self.blocking_timer_seconds = seconds
+
+            # Update blocking status card
+            blocking_card = self.query_one("#blocking-status", BlockingStatusCard)
+            if seconds:
+                timer_label = format_duration(seconds)
+                blocking_card.update_status(False, timer_text=timer_label)
+                self._start_countdown(seconds)
+                msg = f"DNS blocking disabled for {timer_label}"
+            else:
+                blocking_card.update_status(False)
+                msg = "DNS blocking disabled permanently"
+
+            if reason:
+                logger.info(f"Blocking disabled. Reason: {reason}. Duration: {seconds}s")
+            else:
+                logger.info(f"Blocking disabled. Duration: {seconds}s")
+
+            self.notify(msg, severity="warning", timeout=5)
+
+        except NetworkError as e:
+            logger.error(f"Network error disabling blocking: {e.message}")
+            self.notify(
+                f"Network error — could not disable blocking: {e.message}",
+                severity="error",
+                timeout=8,
+            )
+        except PiHoleAPIError as e:
+            logger.error(f"API error disabling blocking: {e.message}")
+            self.notify(
+                f"Failed to disable blocking: {e.message}",
+                severity="error",
+                timeout=8,
+            )
+        except Exception:
+            logger.exception("Unexpected error disabling blocking")
+            self.notify("Unexpected error disabling blocking", severity="error", timeout=8)
+
+    # ------------------------------------------------------------------
+    # Countdown helpers — T070, T071, T072
+    # ------------------------------------------------------------------
+
+    def _start_countdown(self, seconds: int) -> None:
+        """Show the countdown banner and start the timer widget."""
+        container = self.query_one("#countdown-container", Container)
+        container.add_class("visible")
+
+        timer = self.query_one("#countdown-timer", CountdownTimer)
+        timer.start(seconds)
+
+    def _stop_countdown(self) -> None:
+        """Hide the countdown banner and stop the timer widget."""
+        container = self.query_one("#countdown-container", Container)
+        container.remove_class("visible")
+
+        timer = self.query_one("#countdown-timer", CountdownTimer)
+        timer.stop()
+
+    @on(CountdownTimer.Expired)
+    async def _on_countdown_expired(self) -> None:
+        """Auto re-enable blocking when the temporary disable timer expires."""
+        logger.info("Temporary disable timer expired — re-enabling blocking")
+        self.notify("Re-enabling DNS blocking (timer expired)…", severity="information", timeout=4)
+        await self._perform_enable()
+
+    # ------------------------------------------------------------------
+    # Navigation actions
+    # ------------------------------------------------------------------
 
     async def action_refresh(self) -> None:
-        """Handle manual refresh action (F5)."""
         await self.refresh_data()
         self.notify("Dashboard refreshed", timeout=2)
 
     def action_query_log(self) -> None:
-        """Navigate to query log screen."""
         from pihole_tui.api.queries import QueriesAPI
         from pihole_tui.screens.query_log import QueryLogScreen
 
-        # Create queries API instance
         queries_api = QueriesAPI(self.api_client)
-
-        # Push the query log screen
         self.app.push_screen(QueryLogScreen(queries_api))
 
     def action_domains(self) -> None:
-        """Navigate to domains screen."""
         self.notify("Domain management not yet implemented", severity="warning")
-
-    def action_toggle_blocking(self) -> None:
-        """Toggle blocking status."""
-        self.notify("Blocking toggle not yet implemented", severity="warning")
 
     def update_refresh_interval(self, interval: int) -> None:
         """Update auto-refresh interval.
@@ -342,7 +711,6 @@ class DashboardScreen(Screen):
         """
         self.refresh_interval = interval
 
-        # Restart timer with new interval
         if self._refresh_timer:
             self._refresh_timer.stop()
 

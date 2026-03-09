@@ -148,18 +148,18 @@
 
 ### Implementation for User Story 4
 
-- [ ] T064 [P] [US4] Create src/pihole_tui/models/blocking.py with BlockingState, BlockingToggleRequest models
-- [ ] T065 [P] [US4] Add POST /api/dns/blocking endpoint to src/pihole_tui/api/blocking.py for enabling/disabling with optional timer
-- [ ] T066 [P] [US4] Create src/pihole_tui/widgets/countdown_timer.py with timer widget displaying remaining time with visual countdown
-- [ ] T067 [US4] Implement blocking toggle action in src/pihole_tui/screens/dashboard.py with confirmation dialog
-- [ ] T068 [US4] Implement duration selection dialog in src/pihole_tui/screens/dashboard.py with preset options (30s, 1m, 5m, 15m, 30m, 1h) and custom duration input
-- [ ] T069 [US4] Implement optional reason/comment input in duration selection dialog in src/pihole_tui/screens/dashboard.py
-- [ ] T070 [US4] Implement countdown timer display in src/pihole_tui/screens/dashboard.py using countdown_timer.py widget with yellow status indicator
-- [ ] T071 [US4] Implement auto-enable logic in src/pihole_tui/screens/dashboard.py that re-enables blocking when timer expires with notification
-- [ ] T072 [US4] Implement manual re-enable action in src/pihole_tui/screens/dashboard.py that cancels active timer
-- [ ] T073 [US4] Update status_indicator.py widget to show three states: enabled (green), disabled (red), temp disabled with timer (yellow)
-- [ ] T074 [US4] Implement global keyboard shortcut (Ctrl+B) in src/pihole_tui/app.py for quick blocking toggle accessible from any screen
-- [ ] T075 [US4] Implement error handling in blocking toggle for network failures, maintaining previous state on error
+- [X] T064 [P] [US4] Create src/pihole_tui/models/blocking.py with BlockingState, BlockingToggleRequest models
+- [X] T065 [P] [US4] Add POST /api/dns/blocking endpoint to src/pihole_tui/api/blocking.py for enabling/disabling with optional timer
+- [X] T066 [P] [US4] Create src/pihole_tui/widgets/countdown_timer.py with timer widget displaying remaining time with visual countdown
+- [X] T067 [US4] Implement blocking toggle action in src/pihole_tui/screens/dashboard.py with confirmation dialog
+- [X] T068 [US4] Implement duration selection dialog in src/pihole_tui/screens/dashboard.py with preset options (30s, 1m, 5m, 15m, 30m, 1h) and custom duration input
+- [X] T069 [US4] Implement optional reason/comment input in duration selection dialog in src/pihole_tui/screens/dashboard.py
+- [X] T070 [US4] Implement countdown timer display in src/pihole_tui/screens/dashboard.py using countdown_timer.py widget with yellow status indicator
+- [X] T071 [US4] Implement auto-enable logic in src/pihole_tui/screens/dashboard.py that re-enables blocking when timer expires with notification
+- [X] T072 [US4] Implement manual re-enable action in src/pihole_tui/screens/dashboard.py that cancels active timer
+- [X] T073 [US4] Update status_indicator.py widget to show three states: enabled (green), disabled (red), temp disabled with timer (yellow)
+- [X] T074 [US4] Implement global keyboard shortcut (Ctrl+B) in src/pihole_tui/app.py for quick blocking toggle accessible from any screen
+- [X] T075 [US4] Implement error handling in blocking toggle for network failures, maintaining previous state on error
 
 **Checkpoint**: User Stories 1-4 complete. Can authenticate, view dashboard, query log, and control blocking with timers.
 

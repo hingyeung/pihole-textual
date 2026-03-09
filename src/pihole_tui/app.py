@@ -71,6 +71,7 @@ class PiHoleTUI(App):
     BINDINGS = [
         Binding("s", "show_settings", "Settings"),
         Binding("q", "show_query_log", "Query Log", show=True),
+        Binding("ctrl+b", "toggle_blocking", "Toggle Blocking", show=True),
         Binding("ctrl+q", "quit", "Quit"),
         Binding("ctrl+c", "quit", "Quit", show=False),
     ]
@@ -419,6 +420,29 @@ class PiHoleTUI(App):
             session_info.update(f"{profile_name} | Session: {expiry_text}")
         else:
             session_info.update("Not connected")
+
+    def action_toggle_blocking(self) -> None:
+        """Global Ctrl+B handler — delegates to the dashboard if it is active.
+
+        When the dashboard is not the current screen (e.g. user is on the
+        query log), the keypress is still caught here so the binding shows
+        up in the footer.  In that case we surface a friendly warning rather
+        than silently doing nothing.
+        """
+        from pihole_tui.screens.dashboard import DashboardScreen
+
+        screen = self.screen
+        if isinstance(screen, DashboardScreen):
+            # action_toggle_blocking is sync — it launches its own worker internally
+            screen.action_toggle_blocking()
+        elif not self.session.is_authenticated:
+            self.notify("Not connected — please log in first.", severity="warning")
+        else:
+            self.notify(
+                "Navigate to the Dashboard (Ctrl+Q → reconnect) to toggle blocking.",
+                severity="warning",
+                timeout=4,
+            )
 
     def action_show_settings(self) -> None:
         """Show settings screen."""

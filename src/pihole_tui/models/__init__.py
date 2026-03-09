@@ -3,6 +3,7 @@
 Exports all Pydantic models used throughout the application.
 """
 
+from pihole_tui.models.blocking import BlockingState, BlockingToggleRequest
 from pihole_tui.models.config import ConnectionProfile, UserPreferences
 from pihole_tui.models.session import SessionState
 from pihole_tui.models.stats import (
@@ -12,6 +13,8 @@ from pihole_tui.models.stats import (
 )
 
 __all__ = [
+    "BlockingState",
+    "BlockingToggleRequest",
     "ConnectionProfile",
     "UserPreferences",
     "SessionState",
