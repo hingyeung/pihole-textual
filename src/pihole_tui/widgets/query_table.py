@@ -7,12 +7,18 @@ from textual.widgets import DataTable, Static
 from textual.binding import Binding
 from textual.message import Message
 
-from pihole_tui.models.query import QueryLogEntry, QueryStatus
+from pihole_tui.models.query import QueryLogEntry
 from pihole_tui.utils.formatters import format_relative_time
 
 
 class QueryTable(DataTable):
     """Custom DataTable widget for displaying query log entries with colour coding."""
+
+    DEFAULT_CSS = """
+    QueryTable {
+        height: 1fr;
+    }
+    """
 
     BINDINGS = [
         Binding("enter", "select_query", "View Details", show=True),
@@ -98,40 +104,53 @@ class QueryTable(DataTable):
             if row_key is not None:
                 self._apply_row_style(row_key, query.status)
 
-    def _format_status(self, status: QueryStatus) -> str:
+    _BLOCKED_STATUSES = {
+        "GRAVITY", "BLACKLIST", "REGEX",
+        "GRAVITY_CNAME", "BLACKLIST_CNAME", "REGEX_CNAME",
+        "EXTERNAL_BLOCKED_IP", "EXTERNAL_BLOCKED_NULL", "EXTERNAL_BLOCKED_NXRA",
+        "BLOCKED",
+    }
+    _CACHED_STATUSES = {"CACHE", "CACHED", "CACHE_STALE"}
+    _FORWARDED_STATUSES = {"FORWARD", "FORWARDED"}
+
+    def _format_status(self, status: str) -> str:
         """Format status for display with appropriate symbol.
 
         Args:
-            status: Query status
+            status: Query status string from API
 
         Returns:
             Formatted status string
         """
-        symbols = {
-            QueryStatus.ALLOWED: "✓ Allowed",
-            QueryStatus.BLOCKED: "✗ Blocked",
-            QueryStatus.CACHED: "⊙ Cached",
-            QueryStatus.FORWARDED: "→ Forwarded",
-        }
-        return symbols.get(status, status.value)
+        s = status.upper()
+        if s in self._BLOCKED_STATUSES:
+            return "✗ Blocked"
+        if s in self._CACHED_STATUSES:
+            return "⊙ Cached"
+        if s in self._FORWARDED_STATUSES:
+            return "→ Forwarded"
+        if s in ("ALLOWED", "SPECIAL_DOMAIN"):
+            return "✓ Allowed"
+        return status
 
-    def _apply_row_style(self, row_key: str, status: QueryStatus) -> None:
+    def _apply_row_style(self, row_key: str, status: str) -> None:
         """Apply colour coding to a row based on query status.
 
         Args:
             row_key: Row key to style
-            status: Query status determining the colour
+            status: Query status string from API
         """
-        # Colour mapping based on status
-        # green=allowed, red=blocked, blue=cached, yellow=forwarded
-        styles = {
-            QueryStatus.ALLOWED: "green",
-            QueryStatus.BLOCKED: "red",
-            QueryStatus.CACHED: "blue",
-            QueryStatus.FORWARDED: "yellow",
-        }
-
-        style = styles.get(status, "white")
+        s = status.upper()
+        if s in self._BLOCKED_STATUSES:
+            style = "red"
+        elif s in self._CACHED_STATUSES:
+            style = "blue"
+        elif s in self._FORWARDED_STATUSES:
+            style = "yellow"
+        elif s in ("ALLOWED", "SPECIAL_DOMAIN"):
+            style = "green"
+        else:
+            style = "white"
 
         # Apply style to the status column (index 4)
         try:
@@ -195,7 +214,7 @@ class QueryTable(DataTable):
             "client": lambda q: q.client_hostname or q.client_ip,
             "domain": lambda q: q.domain,
             "type": lambda q: q.query_type,
-            "status": lambda q: q.status.value,
+            "status": lambda q: q.status,
             "reply": lambda q: q.reply_type,
             "response": lambda q: q.response_time_ms,
         }

@@ -64,7 +64,7 @@ class QueryLogEntry(BaseModel):
     client: ClientInfo = Field(description="Client information")
     domain: str = Field(description="Queried domain name")
     query_type: Optional[str] = Field(None, description="DNS record type (A, AAAA, etc.)", alias="type")
-    status: QueryStatus = Field(description="Query status")
+    status: str = Field(description="Query status")
     reply: Optional[ReplyInfo] = Field(None, description="Reply information object")
     response_time_ms: int = Field(0, description="Response time in milliseconds")
     blocklist: Optional[str] = Field(None, description="Name of blocklist that blocked query (if blocked)")

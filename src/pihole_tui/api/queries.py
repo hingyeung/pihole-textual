@@ -74,14 +74,6 @@ class QueriesAPI:
 
         response = await self.client.get("/api/queries", params=params)
 
-        # Debug: Log the raw response to see actual structure
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.debug(f"Raw API response keys: {list(response.keys()) if isinstance(response, dict) else 'not a dict'}")
-        if isinstance(response, dict) and 'queries' in response and response['queries']:
-            logger.debug(f"First query keys: {list(response['queries'][0].keys())}")
-            logger.debug(f"First query sample: {response['queries'][0]}")
-
         # Parse response into QueryLogResponse model
         return QueryLogResponse(**response)
 

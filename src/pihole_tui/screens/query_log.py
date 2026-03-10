@@ -4,15 +4,22 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from textual.app import ComposeResult
-from textual.containers import Container, Horizontal, Vertical
+from textual.containers import Container, Horizontal, HorizontalGroup, Vertical
 from textual.screen import Screen
 from textual.widgets import Button, Header, Footer, Input, Select, Static, Label
 from textual.binding import Binding
 from textual.message import Message
 
-from pihole_tui.models.query import QueryLogFilters, QueryLogResponse, QueryLogEntry, QueryStatus
+from pihole_tui.models.query import QueryLogFilters, QueryLogResponse, QueryLogEntry
 from pihole_tui.widgets.query_table import QueryTable
 from pihole_tui.api.queries import QueriesAPI
+
+_BLOCKED_STATUSES = {
+    "GRAVITY", "BLACKLIST", "REGEX",
+    "GRAVITY_CNAME", "BLACKLIST_CNAME", "REGEX_CNAME",
+    "EXTERNAL_BLOCKED_IP", "EXTERNAL_BLOCKED_NULL", "EXTERNAL_BLOCKED_NXRA",
+    "BLOCKED",
+}
 
 
 class QueryDetailsModal(Screen):
@@ -42,7 +49,7 @@ class QueryDetailsModal(Screen):
                 yield Static(f"Client Hostname: {self.query.client_hostname}")
             yield Static(f"Domain: {self.query.domain}")
             yield Static(f"Query Type: {self.query.query_type or 'N/A'}")
-            yield Static(f"Status: {self.query.status.value}")
+            yield Static(f"Status: {self.query.status}")
             yield Static(f"Reply Type: {self.query.reply_type or 'N/A'}")
             yield Static(f"Response Time: {self.query.response_time_ms}ms")
             if self.query.blocklist_name:
@@ -69,6 +76,31 @@ class QueryDetailsModal(Screen):
 
 class QueryLogScreen(Screen):
     """Query log viewer screen with filtering and export."""
+
+    DEFAULT_CSS = """
+    QueryLogScreen #query-log-container {
+        height: 1fr;
+        layout: vertical;
+    }
+
+    QueryLogScreen #filter-bar {
+        height: auto;
+        layout: horizontal;
+    }
+
+    QueryLogScreen #filter-row-1,
+    QueryLogScreen #filter-row-2,
+    QueryLogScreen #filter-row-3 {
+        height: auto;
+        width: 1fr;
+        padding: 0 1;
+    }
+
+    QueryLogScreen #pagination-controls {
+        height: 3;
+        align: center middle;
+    }
+    """
 
     BINDINGS = [
         Binding("q", "app.pop_screen", "Back", show=True),
@@ -99,7 +131,7 @@ class QueryLogScreen(Screen):
             # Filter bar
             with Horizontal(id="filter-bar"):
                 with Vertical(id="filter-row-1"):
-                    with Horizontal():
+                    with HorizontalGroup():
                         yield Label("Status:")
                         yield Select(
                             [
@@ -127,7 +159,7 @@ class QueryLogScreen(Screen):
                         )
 
                 with Vertical(id="filter-row-2"):
-                    with Horizontal():
+                    with HorizontalGroup():
                         yield Label("Client:")
                         yield Input(placeholder="IP or hostname", id="client-filter")
 
@@ -135,7 +167,7 @@ class QueryLogScreen(Screen):
                         yield Input(placeholder="Search domain", id="domain-filter")
 
                 with Vertical(id="filter-row-3"):
-                    with Horizontal():
+                    with HorizontalGroup():
                         yield Label("Query Type:")
                         yield Select(
                             [
@@ -213,22 +245,20 @@ class QueryLogScreen(Screen):
             if self._client_side_status_filter:
                 status_filter = self._client_side_status_filter.lower()
                 if status_filter == "blocked":
-                    # Blocked queries have a non-null blocklist field
-                    filtered_queries = [q for q in response.queries if q.blocklist is not None]
+                    filtered_queries = [q for q in response.queries if q.status.upper() in _BLOCKED_STATUSES]
                 elif status_filter == "allowed":
-                    # Allowed queries have no blocklist and were forwarded/cached
-                    filtered_queries = [q for q in response.queries if q.blocklist is None]
+                    filtered_queries = [q for q in response.queries if q.status.upper() in ("ALLOWED", "SPECIAL_DOMAIN")]
                 elif status_filter == "cached":
-                    # Cached queries have status "CACHE"
+                    # Cached queries have status "CACHE" or "CACHE_STALE"
                     filtered_queries = [
                         q for q in response.queries
-                        if q.status.value.upper() in ["CACHE", "CACHED"]
+                        if q.status.upper() in ["CACHE", "CACHED", "CACHE_STALE"]
                     ]
                 elif status_filter == "forwarded":
                     # Forwarded queries have status "FORWARD" or "FORWARDED"
                     filtered_queries = [
                         q for q in response.queries
-                        if q.status.value.upper() in ["FORWARD", "FORWARDED"]
+                        if q.status.upper() in ["FORWARD", "FORWARDED"]
                     ]
 
             # Update table
@@ -398,7 +428,7 @@ class QueryLogScreen(Screen):
                         query.client_hostname or "",
                         query.domain,
                         query.query_type or "N/A",
-                        query.status.value,
+                        query.status,
                         query.reply_type or "N/A",
                         query.response_time_ms,
                         query.blocklist_name or ""
