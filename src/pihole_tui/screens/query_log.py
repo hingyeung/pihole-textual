@@ -332,7 +332,9 @@ class QueryLogScreen(Screen):
         next_button = self.query_one("#next-page", Button)
 
         prev_button.disabled = self._cursor_index <= 0
-        next_button.disabled = response.cursor is None
+        # No more pages when: no cursor, or fewer results than requested (last page)
+        at_end = response.cursor is None or len(response.queries) < self.filters.limit
+        next_button.disabled = at_end
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
@@ -399,7 +401,8 @@ class QueryLogScreen(Screen):
         # Reply type filter
         self.filters.reply_type = reply_type_filter if reply_type_filter != "all" else None
 
-        # Reload queries
+        # Reload queries (back on page 1, resume auto-refresh)
+        self._update_auto_refresh()
         await self.load_queries()
         self.notify("Filters applied", severity="information")
 
@@ -419,7 +422,8 @@ class QueryLogScreen(Screen):
         self.query_one("#query-type-filter", Select).value = "all"
         self.query_one("#reply-type-filter", Select).value = "all"
 
-        # Reload queries
+        # Reload queries (back on page 1, resume auto-refresh)
+        self._update_auto_refresh()
         await self.load_queries()
         self.notify("Filters cleared", severity="information")
 
@@ -431,16 +435,29 @@ class QueryLogScreen(Screen):
         """Go to previous page."""
         if self._cursor_index > 0:
             self._cursor_index -= 1
+            self._update_auto_refresh()
             await self.load_queries()
 
     async def action_next_page(self) -> None:
         """Go to next page."""
-        if self.current_response and self.current_response.cursor is not None:
+        at_end = (not self.current_response
+                  or self.current_response.cursor is None
+                  or len(self.current_response.queries) < self.filters.limit)
+        if not at_end:
             # Store the next cursor if we haven't visited this page before
             if self._cursor_index + 1 >= len(self._cursor_stack):
                 self._cursor_stack.append(self.current_response.cursor)
             self._cursor_index += 1
+            self._update_auto_refresh()
             await self.load_queries()
+
+    def _update_auto_refresh(self) -> None:
+        """Run auto-refresh only on page 1 (live data); stop it on historical pages."""
+        if self._cursor_index == 0:
+            if not self._refresh_timer:
+                self._start_auto_refresh()
+        else:
+            self._stop_auto_refresh()
 
     async def action_export_csv(self) -> None:
         """Export current query log to CSV."""
