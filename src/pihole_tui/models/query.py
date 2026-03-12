@@ -112,21 +112,13 @@ class QueryLogFilters(BaseModel):
     """Represents active filters for query log."""
     from_timestamp: Optional[datetime] = Field(None, description="Start of time range")
     until_timestamp: Optional[datetime] = Field(None, description="End of time range")
-    blocked: Optional[bool] = Field(None, description="Filter by blocked status (true=blocked only, false=allowed only, null=all)")
+    upstream: Optional[str] = Field(None, description="Filter by upstream; special values: 'blocklist', 'cache', 'permitted'")
     client: Optional[str] = Field(None, description="Filter by client IP or hostname")
     domain_pattern: Optional[str] = Field(None, description="Search pattern for domain names")
     query_type: Optional[str] = Field(None, description="Filter by query type")
     reply_type: Optional[str] = Field(None, description="Filter by reply type")
-    page: int = Field(1, description="Current page number (1-indexed)")
+    cursor: Optional[int] = Field(None, description="Cursor for pagination (ID of last query on previous page)")
     limit: int = Field(50, description="Items per page")
-
-    @field_validator('page')
-    @classmethod
-    def validate_page(cls, v: int) -> int:
-        """Validate page is positive integer."""
-        if v < 1:
-            raise ValueError("Page must be positive integer")
-        return v
 
     @field_validator('limit')
     @classmethod
@@ -154,9 +146,9 @@ class QueryLogResponse(BaseModel):
 
     queries: List[QueryLogEntry] = Field(description="List of query entries for current page")
     # API has these fields at top level, not nested in pagination object
-    cursor: Optional[int] = Field(None, description="Cursor for pagination (ID of last query)")
-    recordsTotal: int = Field(0, description="Total number of records", alias="total_count")
-    recordsFiltered: int = Field(0, description="Number of filtered records")
+    cursor: Optional[int] = Field(None, description="Cursor for pagination (ID of oldest query in current page)")
+    recordsTotal: int = Field(0, description="Total number of records (unfiltered)")
+    recordsFiltered: int = Field(0, description="Number of records after applying filters")
 
     @property
     def total_count(self) -> int:

@@ -15,11 +15,15 @@ from pihole_tui.widgets.query_table import QueryTable
 from pihole_tui.api.queries import QueriesAPI
 
 _BLOCKED_STATUSES = {
-    "GRAVITY", "BLACKLIST", "REGEX",
-    "GRAVITY_CNAME", "BLACKLIST_CNAME", "REGEX_CNAME",
-    "EXTERNAL_BLOCKED_IP", "EXTERNAL_BLOCKED_NULL", "EXTERNAL_BLOCKED_NXRA",
+    "GRAVITY", "GRAVITY_CNAME",
+    "REGEX", "REGEX_CNAME",
+    "BLACKLIST", "BLACKLIST_CNAME",   # Pi-hole v5
+    "DENYLIST", "DENYLIST_CNAME",     # Pi-hole v6
+    "EXTERNAL_BLOCKED_IP", "EXTERNAL_BLOCKED_NULL", "EXTERNAL_BLOCKED_NXRA", "EXTERNAL_BLOCKED_EDE15",
     "BLOCKED",
 }
+_CACHED_STATUSES = {"CACHE", "CACHED", "CACHE_STALE"}
+_FORWARDED_STATUSES = {"FORWARD", "FORWARDED"}
 
 
 class QueryDetailsModal(Screen):
@@ -106,6 +110,11 @@ class QueryLogScreen(Screen):
         height: 3;
         align: center middle;
     }
+
+    QueryLogScreen #page-info {
+        width: auto;
+        padding: 0 2;
+    }
     """
 
     BINDINGS = [
@@ -128,7 +137,10 @@ class QueryLogScreen(Screen):
         self.refresh_interval = 5  # seconds
         self._refresh_timer = None
         self._client_side_status_filter: Optional[str] = None  # For forwarded/cached filtering
-        self._time_range: Optional[str] = None  # Selected time range ("1h", "24h", "7d", or None)
+        self._time_range: Optional[str] = None  # Selected time range ("5m", "30m", "1h", "24h", "7d", or None)
+        # Cursor stack for pagination: index 0 = page 1 (no cursor), index N = cursor for page N+1
+        self._cursor_stack: list = [None]
+        self._cursor_index: int = 0
 
     def compose(self) -> ComposeResult:
         """Compose the query log screen."""
@@ -266,31 +278,25 @@ class QueryLogScreen(Screen):
                 self.filters.from_timestamp = None
                 self.filters.until_timestamp = None
 
+            # Set cursor from navigation stack
+            self.filters.cursor = self._cursor_stack[self._cursor_index]
+
             # Fetch queries
             response = await self.queries_api.get_queries_with_filters(self.filters)
             self.current_response = response
 
-            # Apply client-side status filter
-            # Note: Pi-hole API indicates blocked via blocklist field, not status
+            # Apply client-side status filter for accuracy
             filtered_queries = response.queries
             if self._client_side_status_filter:
-                status_filter = self._client_side_status_filter.lower()
-                if status_filter == "blocked":
+                f = self._client_side_status_filter.lower()
+                if f == "blocked":
                     filtered_queries = [q for q in response.queries if q.status.upper() in _BLOCKED_STATUSES]
-                elif status_filter == "allowed":
+                elif f == "allowed":
                     filtered_queries = [q for q in response.queries if q.status.upper() in ("ALLOWED", "SPECIAL_DOMAIN")]
-                elif status_filter == "cached":
-                    # Cached queries have status "CACHE" or "CACHE_STALE"
-                    filtered_queries = [
-                        q for q in response.queries
-                        if q.status.upper() in ["CACHE", "CACHED", "CACHE_STALE"]
-                    ]
-                elif status_filter == "forwarded":
-                    # Forwarded queries have status "FORWARD" or "FORWARDED"
-                    filtered_queries = [
-                        q for q in response.queries
-                        if q.status.upper() in ["FORWARD", "FORWARDED"]
-                    ]
+                elif f == "cached":
+                    filtered_queries = [q for q in response.queries if q.status.upper() in _CACHED_STATUSES]
+                elif f == "forwarded":
+                    filtered_queries = [q for q in response.queries if q.status.upper() in _FORWARDED_STATUSES]
 
             # Update table
             table.update_queries(filtered_queries)
@@ -315,15 +321,18 @@ class QueryLogScreen(Screen):
         response = self.current_response
 
         # Update page info
+        current_page = self._cursor_index + 1
+        count = response.recordsFiltered if response.recordsFiltered > 0 else response.recordsTotal
+        total_pages = (count + self.filters.limit - 1) // self.filters.limit if count > 0 else 1
         page_info = self.query_one("#page-info", Static)
-        page_info.update(f"Page {response.page} of {response.total_pages} ({response.total_count} queries)")
+        page_info.update(f"Page {current_page} of {total_pages} ({count} queries)")
 
         # Update button states
         prev_button = self.query_one("#prev-page", Button)
         next_button = self.query_one("#next-page", Button)
 
-        prev_button.disabled = response.page <= 1
-        next_button.disabled = response.page >= response.total_pages
+        prev_button.disabled = self._cursor_index <= 0
+        next_button.disabled = response.cursor is None
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
@@ -346,18 +355,28 @@ class QueryLogScreen(Screen):
         query_type_filter = self.query_one("#query-type-filter", Select).value
         reply_type_filter = self.query_one("#reply-type-filter", Select).value
 
-        # Update filters model
-        self.filters.page = 1  # Reset to first page
+        # Reset to first page
+        self._cursor_stack = [None]
+        self._cursor_index = 0
 
-        # Status filter
-        # Note: Pi-hole API indicates blocked via blocklist field, not status
-        # All status filters are done client-side for accuracy
-        if status_filter in ["blocked", "allowed", "forwarded", "cached"]:
-            self.filters.blocked = None  # Get all from API
-            self._client_side_status_filter = status_filter
+        # Status filter — upstream param is a server-side hint to pre-filter results;
+        # client-side filter is always applied for accuracy since upstream values can be imprecise.
+        if status_filter == "blocked":
+            self.filters.upstream = "blocklist"
+            self._client_side_status_filter = "blocked"
+        elif status_filter == "cached":
+            self.filters.upstream = "cache"
+            self._client_side_status_filter = "cached"
+        elif status_filter == "forwarded":
+            # Don't use upstream=permitted — it includes cached queries too
+            self.filters.upstream = None
+            self._client_side_status_filter = "forwarded"
+        elif status_filter == "allowed":
+            self.filters.upstream = None
+            self._client_side_status_filter = "allowed"
         else:
             # "all" - no filtering
-            self.filters.blocked = None
+            self.filters.upstream = None
             self._client_side_status_filter = None
 
         # Time range filter — store label so load_queries recalculates on every refresh
@@ -386,9 +405,11 @@ class QueryLogScreen(Screen):
 
     async def action_clear_filters(self) -> None:
         """Clear all filters."""
-        # Reset filter model and time range selection
+        # Reset filter model, time range, and cursor stack
         self.filters = QueryLogFilters()
         self._time_range = None
+        self._cursor_stack = [None]
+        self._cursor_index = 0
 
         # Reset UI
         self.query_one("#status-filter", Select).value = "all"
@@ -408,14 +429,17 @@ class QueryLogScreen(Screen):
 
     async def action_previous_page(self) -> None:
         """Go to previous page."""
-        if self.filters.page > 1:
-            self.filters.page -= 1
+        if self._cursor_index > 0:
+            self._cursor_index -= 1
             await self.load_queries()
 
     async def action_next_page(self) -> None:
         """Go to next page."""
-        if self.current_response and self.filters.page < self.current_response.total_pages:
-            self.filters.page += 1
+        if self.current_response and self.current_response.cursor is not None:
+            # Store the next cursor if we haven't visited this page before
+            if self._cursor_index + 1 >= len(self._cursor_stack):
+                self._cursor_stack.append(self.current_response.cursor)
+            self._cursor_index += 1
             await self.load_queries()
 
     async def action_export_csv(self) -> None:

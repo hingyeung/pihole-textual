@@ -105,9 +105,11 @@ class QueryTable(DataTable):
                 self._apply_row_style(row_key, query.status)
 
     _BLOCKED_STATUSES = {
-        "GRAVITY", "BLACKLIST", "REGEX",
-        "GRAVITY_CNAME", "BLACKLIST_CNAME", "REGEX_CNAME",
-        "EXTERNAL_BLOCKED_IP", "EXTERNAL_BLOCKED_NULL", "EXTERNAL_BLOCKED_NXRA",
+        "GRAVITY", "GRAVITY_CNAME",
+        "REGEX", "REGEX_CNAME",
+        "BLACKLIST", "BLACKLIST_CNAME",     # Pi-hole v5
+        "DENYLIST", "DENYLIST_CNAME",       # Pi-hole v6
+        "EXTERNAL_BLOCKED_IP", "EXTERNAL_BLOCKED_NULL", "EXTERNAL_BLOCKED_NXRA", "EXTERNAL_BLOCKED_EDE15",
         "BLOCKED",
     }
     _CACHED_STATUSES = {"CACHE", "CACHED", "CACHE_STALE"}
