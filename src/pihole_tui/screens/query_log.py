@@ -96,6 +96,12 @@ class QueryLogScreen(Screen):
         padding: 0 1;
     }
 
+    QueryLogScreen #filter-actions {
+        height: auto;
+        align: right middle;
+        padding: 0 1;
+    }
+
     QueryLogScreen #pagination-controls {
         height: 3;
         align: center middle;
@@ -197,8 +203,9 @@ class QueryLogScreen(Screen):
                             id="reply-type-filter"
                         )
 
-                        yield Button("Apply Filters", id="apply-filters", variant="primary")
-                        yield Button("Clear Filters", id="clear-filters", variant="default")
+            with Horizontal(id="filter-actions"):
+                yield Button("Apply Filters", id="apply-filters", variant="primary")
+                yield Button("Clear Filters", id="clear-filters", variant="default")
 
             # Query table
             yield QueryTable(id="query-table")
