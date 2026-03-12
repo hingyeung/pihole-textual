@@ -156,6 +156,8 @@ class QueryLogScreen(Screen):
                         yield Select(
                             [
                                 ("All Time", "all"),
+                                ("Last 5 Minutes", "5m"),
+                                ("Last 30 Minutes", "30m"),
                                 ("Last Hour", "1h"),
                                 ("Last 24 Hours", "24h"),
                                 ("Last 7 Days", "7d"),
@@ -245,7 +247,13 @@ class QueryLogScreen(Screen):
 
             # Recalculate time range timestamps on every load so the window stays current
             now = datetime.now()
-            if self._time_range == "1h":
+            if self._time_range == "5m":
+                self.filters.from_timestamp = now - timedelta(minutes=5)
+                self.filters.until_timestamp = now
+            elif self._time_range == "30m":
+                self.filters.from_timestamp = now - timedelta(minutes=30)
+                self.filters.until_timestamp = now
+            elif self._time_range == "1h":
                 self.filters.from_timestamp = now - timedelta(hours=1)
                 self.filters.until_timestamp = now
             elif self._time_range == "24h":
@@ -353,7 +361,7 @@ class QueryLogScreen(Screen):
             self._client_side_status_filter = None
 
         # Time range filter — store label so load_queries recalculates on every refresh
-        if time_filter in ("1h", "24h", "7d"):
+        if time_filter in ("5m", "30m", "1h", "24h", "7d"):
             self._time_range = time_filter
         else:
             self._time_range = None
