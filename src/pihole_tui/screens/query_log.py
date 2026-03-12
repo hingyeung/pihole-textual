@@ -122,6 +122,7 @@ class QueryLogScreen(Screen):
         self.refresh_interval = 5  # seconds
         self._refresh_timer = None
         self._client_side_status_filter: Optional[str] = None  # For forwarded/cached filtering
+        self._time_range: Optional[str] = None  # Selected time range ("1h", "24h", "7d", or None)
 
     def compose(self) -> ComposeResult:
         """Compose the query log screen."""
@@ -235,6 +236,21 @@ class QueryLogScreen(Screen):
             # Get table widget
             table = self.query_one("#query-table", QueryTable)
 
+            # Recalculate time range timestamps on every load so the window stays current
+            now = datetime.now()
+            if self._time_range == "1h":
+                self.filters.from_timestamp = now - timedelta(hours=1)
+                self.filters.until_timestamp = now
+            elif self._time_range == "24h":
+                self.filters.from_timestamp = now - timedelta(hours=24)
+                self.filters.until_timestamp = now
+            elif self._time_range == "7d":
+                self.filters.from_timestamp = now - timedelta(days=7)
+                self.filters.until_timestamp = now
+            elif self._time_range is None:
+                self.filters.from_timestamp = None
+                self.filters.until_timestamp = None
+
             # Fetch queries
             response = await self.queries_api.get_queries_with_filters(self.filters)
             self.current_response = response
@@ -329,18 +345,11 @@ class QueryLogScreen(Screen):
             self.filters.blocked = None
             self._client_side_status_filter = None
 
-        # Time range filter
-        now = datetime.now()
-        if time_filter == "1h":
-            self.filters.from_timestamp = now - timedelta(hours=1)
-            self.filters.until_timestamp = now
-        elif time_filter == "24h":
-            self.filters.from_timestamp = now - timedelta(hours=24)
-            self.filters.until_timestamp = now
-        elif time_filter == "7d":
-            self.filters.from_timestamp = now - timedelta(days=7)
-            self.filters.until_timestamp = now
+        # Time range filter — store label so load_queries recalculates on every refresh
+        if time_filter in ("1h", "24h", "7d"):
+            self._time_range = time_filter
         else:
+            self._time_range = None
             self.filters.from_timestamp = None
             self.filters.until_timestamp = None
 
@@ -362,8 +371,9 @@ class QueryLogScreen(Screen):
 
     async def action_clear_filters(self) -> None:
         """Clear all filters."""
-        # Reset filter model
+        # Reset filter model and time range selection
         self.filters = QueryLogFilters()
+        self._time_range = None
 
         # Reset UI
         self.query_one("#status-filter", Select).value = "all"
