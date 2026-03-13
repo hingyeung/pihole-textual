@@ -2,8 +2,6 @@
 
 A comprehensive terminal user interface (TUI) for managing Pi-hole network-wide ad blocking.
 
-![Pi-hole TUI Homepage](docs/homepage.png)
-
 ## Features
 
 - **Secure Authentication**: Connect to Pi-hole with session management and 2FA support
@@ -11,6 +9,20 @@ A comprehensive terminal user interface (TUI) for managing Pi-hole network-wide 
 - **Query Log Viewer**: Browse and filter DNS queries with advanced search
 - **Blocking Control**: Enable/disable DNS blocking with countdown timers
 - **Domain Management**: Manage allowlist and blocklist with bulk operations
+
+## Screenshots
+
+### Dashboard
+
+![Pi-hole TUI Homepage](docs/homepage.png)
+
+### Query Log
+
+![Query Log](docs/log_query.png)
+
+### Domain Management
+
+![Domain List](docs/domain_list.png)
 
 ## Requirements
 
